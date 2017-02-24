@@ -1,0 +1,30 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-ds-s3"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-ds-s3"
+  },
+  "gxDependencies": [
+    {
+      "author": "jbenet",
+      "hash": "QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364",
+      "name": "go-datastore",
+      "version": "1.2.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmR1J2FeuQqVZwigFA8e1NPXWacgKGZ3uV8ikqzHua6Pm3",
+      "name": "s3gof3r",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "",
+  "name": "go-ds-s3",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.0"
+}
+

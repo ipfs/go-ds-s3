@@ -190,6 +190,10 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 	}), nil
 }
 
+func (s *S3Bucket) Close() error {
+	return nil
+}
+
 type s3Batch struct {
 	s *S3Bucket
 }
