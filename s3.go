@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -128,15 +129,16 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		return nil, fmt.Errorf("s3 datastore doesnt support returning values in query, only keys")
 	}
 
-	if q.Prefix != "" {
-		return nil, fmt.Errorf("s3ds doesnt support prefixes")
-	}
-
 	if q.Orders != nil || q.Filters != nil {
 		return nil, fmt.Errorf("s3ds doesnt support filters or orders")
 	}
 
-	req, err := http.NewRequest("GET", "https://"+s.buck.Name+"."+s.buck.Domain, nil)
+	queryURL := "https://" + s.buck.Name + "." + s.buck.Domain
+	if q.Prefix != "" {
+		queryURL += "?prefix=" + url.QueryEscape(q.Prefix)
+	}
+
+	req, err := http.NewRequest("GET", queryURL, nil)
 	if err != nil {
 		return nil, err
 	}
