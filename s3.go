@@ -49,7 +49,7 @@ func NewS3Datastore(cfg *Config) *S3Bucket {
 	}
 }
 
-func (s *S3Bucket) Get(k ds.Key) (interface{}, error) {
+func (s *S3Bucket) Get(k ds.Key) ([]byte, error) {
 	r, _, err := s.buck.GetReader(k.String(), s.opcfg)
 	switch err := err.(type) {
 	case *s3.RespError:
@@ -76,19 +76,14 @@ func (s *S3Bucket) Delete(k ds.Key) error {
 	return s.buck.Delete(k.String())
 }
 
-func (s *S3Bucket) Put(k ds.Key, val interface{}) error {
-	valb, ok := val.([]byte)
-	if !ok {
-		return fmt.Errorf("value being put was not a []byte")
-	}
-
+func (s *S3Bucket) Put(k ds.Key, val []byte) error {
 	w, err := s.buck.PutWriter(k.String(), nil, s.opcfg)
 	if err != nil {
 		return err
 	}
 	defer w.Close()
 
-	_, err = w.Write(valb)
+	_, err = w.Write(val)
 	if err != nil {
 		return err
 	}
@@ -202,7 +197,7 @@ func (s *S3Bucket) Batch() (ds.Batch, error) {
 	return &s3Batch{s}, nil
 }
 
-func (b *s3Batch) Put(k ds.Key, val interface{}) error {
+func (b *s3Batch) Put(k ds.Key, val []byte) error {
 	return b.s.Put(k, val)
 }
 
