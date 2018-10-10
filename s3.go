@@ -202,6 +202,7 @@ func (s *S3Bucket) Batch() (ds.Batch, error) {
 }
 
 func (s *S3Bucket) Close() error {
+	close(s.limiter)
 	return nil
 }
 
@@ -262,6 +263,8 @@ func (b *s3Batch) Commit() error {
 		errChanSize++
 	}
 	errChan := make(chan error, errChanSize)
+	defer close(errChan)
+
 	for _, k := range putKeys {
 		go func(k ds.Key, op batchOp) {
 			b.s.limiter <- struct{}{}
@@ -298,7 +301,8 @@ func (b *s3Batch) Commit() error {
 		}()
 	}
 
-	for err := range errChan {
+	for i := 0; i < errChanSize; i++ {
+		err := <-errChan
 		if err != nil {
 			return err
 		}
