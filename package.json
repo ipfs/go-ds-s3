@@ -13,7 +13,7 @@
   ],
   "gxVersion": "0.14.0",
   "language": "go",
-  "license": "",
+  "license": "MIT",
   "name": "go-ds-s3",
   "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
   "version": "0.0.0"

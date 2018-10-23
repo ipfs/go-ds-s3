@@ -24,10 +24,8 @@
 #   go-tests = true
 #   unused-packages = true
 
-
-[[constraint]]
-  name = "github.com/ipfs/go-datastore"
-  version = "3.2.0"
+# managed by gx
+ignored = ["github.com/ipfs/go-datastore*"]
 
 [prune]
   go-tests = true
