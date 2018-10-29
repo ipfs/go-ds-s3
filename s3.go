@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"path"
 	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -18,15 +19,21 @@ import (
 	dsq "github.com/ipfs/go-datastore/query"
 )
 
-// listMax is the largest amount of objects you can request from S3 in a list call
-const listMax = 1000
+const (
+	// listMax is the largest amount of objects you can request from S3 in a list
+	// call.
+	listMax = 1000
 
-const defaultConcurrency = 100
+	// deleteMax is the largest amount of objects you can delete from S3 in a
+	// delete objects call.
+	deleteMax = 1000
+
+	defaultWorkers = 100
+)
 
 type S3Bucket struct {
 	Config
-	S3      *s3.S3
-	limiter chan struct{}
+	S3 *s3.S3
 }
 
 type Config struct {
@@ -37,12 +44,12 @@ type Config struct {
 	Region         string
 	RegionEndpoint string
 	RootDirectory  string
-	Concurrency    int
+	Workers        int
 }
 
 func NewS3Datastore(conf Config) (*S3Bucket, error) {
-	if conf.Concurrency == 0 {
-		conf.Concurrency = defaultConcurrency
+	if conf.Workers == 0 {
+		conf.Workers = defaultWorkers
 	}
 
 	awsConfig := aws.NewConfig()
@@ -77,9 +84,8 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 	s3obj := s3.New(sess)
 
 	return &S3Bucket{
-		S3:      s3obj,
-		Config:  conf,
-		limiter: make(chan struct{}, conf.Concurrency),
+		S3:     s3obj,
+		Config: conf,
 	}, nil
 }
 
@@ -106,17 +112,28 @@ func (s *S3Bucket) Get(k ds.Key) ([]byte, error) {
 }
 
 func (s *S3Bucket) Has(k ds.Key) (exists bool, err error) {
-	_, err = s.S3.HeadObject(&s3.HeadObjectInput{
-		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
-	})
+	_, err = s.GetSize(k)
 	if err != nil {
-		if parseError(err) == ds.ErrNotFound {
+		if err == ds.ErrNotFound {
 			return false, nil
 		}
 		return false, err
 	}
 	return true, nil
+}
+
+func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
+	resp, err := s.S3.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(s.Bucket),
+		Key:    aws.String(s.s3Path(k.String())),
+	})
+	if err != nil {
+		if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == "NotFound" {
+			return -1, ds.ErrNotFound
+		}
+		return -1, err
+	}
+	return int(*resp.ContentLength), nil
 }
 
 func (s *S3Bucket) Delete(k ds.Key) error {
@@ -129,7 +146,7 @@ func (s *S3Bucket) Delete(k ds.Key) error {
 
 func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 	if q.Orders != nil || q.Filters != nil {
-		return nil, fmt.Errorf("s3ds doesn't support filters or orders")
+		return nil, fmt.Errorf("s3ds: filters or orders are not supported")
 	}
 
 	limit := q.Limit + q.Offset
@@ -138,10 +155,9 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 	}
 
 	resp, err := s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket:    aws.String(s.Bucket),
-		Prefix:    aws.String(s.s3Path(q.Prefix)),
-		Delimiter: aws.String("/"),
-		MaxKeys:   aws.Int64(int64(limit)),
+		Bucket:  aws.String(s.Bucket),
+		Prefix:  aws.String(s.s3Path(q.Prefix)),
+		MaxKeys: aws.Int64(int64(limit)),
 	})
 	if err != nil {
 		return nil, err
@@ -166,9 +182,6 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 			}
 
 			index -= len(resp.Contents)
-			if index < 0 {
-				index = 0
-			}
 		}
 
 		entry := dsq.Entry{
@@ -196,13 +209,13 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 func (s *S3Bucket) Batch() (ds.Batch, error) {
 	return &s3Batch{
-		s:   s,
-		ops: make(map[string]batchOp),
+		s:       s,
+		ops:     make(map[string]batchOp),
+		workers: s.Workers,
 	}, nil
 }
 
 func (s *S3Bucket) Close() error {
-	close(s.limiter)
 	return nil
 }
 
@@ -214,12 +227,13 @@ func parseError(err error) error {
 	if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == s3.ErrCodeNoSuchKey {
 		return ds.ErrNotFound
 	}
-	return err
+	return nil
 }
 
 type s3Batch struct {
-	s   *S3Bucket
-	ops map[string]batchOp
+	s       *S3Bucket
+	ops     map[string]batchOp
+	workers int
 }
 
 type batchOp struct {
@@ -258,57 +272,81 @@ func (b *s3Batch) Commit() error {
 		}
 	}
 
-	errChanSize := len(putKeys)
-	if len(deleteObjs) > 0 {
-		errChanSize++
-	}
-	errChan := make(chan error, errChanSize)
-	defer close(errChan)
+	numJobs := len(putKeys) + (len(deleteObjs) / deleteMax)
+	jobs := make(chan func() error, numJobs)
+	results := make(chan error, numJobs)
 
-	for _, k := range putKeys {
-		go func(k ds.Key, op batchOp) {
-			b.s.limiter <- struct{}{}
+	var wg sync.WaitGroup
+	wg.Add(b.workers)
+	defer wg.Wait()
 
-			err := b.s.Put(k, op.val)
-			errChan <- err
-
-			<-b.s.limiter
-		}(k, b.ops[k.String()])
-	}
-
-	if len(deleteObjs) > 0 {
+	for w := 0; w < b.workers; w++ {
 		go func() {
-			resp, err := b.s.S3.DeleteObjects(&s3.DeleteObjectsInput{
-				Bucket: aws.String(b.s.Bucket),
-				Delete: &s3.Delete{
-					Objects: deleteObjs,
-				},
-			})
-			if err != nil {
-				errChan <- err
-				return
-			}
-
-			var errs []string
-			for _, err := range resp.Errors {
-				errs = append(errs, err.String())
-			}
-
-			if len(errs) > 0 {
-				err = fmt.Errorf("s3ds: failed to delete objects:\n%s", strings.Join(errs, "\n"))
-			}
-			errChan <- err
+			defer wg.Done()
+			worker(jobs, results)
 		}()
 	}
 
-	for i := 0; i < errChanSize; i++ {
-		err := <-errChan
-		if err != nil {
-			return err
+	for _, k := range putKeys {
+		jobs <- func() error {
+			return b.s.Put(k, b.ops[k.String()].val)
 		}
 	}
 
+	if len(deleteObjs) > 0 {
+		for i := 0; i < len(deleteObjs); i += deleteMax {
+			limit := deleteMax
+			if len(deleteObjs[i:]) < limit {
+				limit = len(deleteObjs[i:])
+			}
+
+			jobs <- func() error {
+				resp, err := b.s.S3.DeleteObjects(&s3.DeleteObjectsInput{
+					Bucket: aws.String(b.s.Bucket),
+					Delete: &s3.Delete{
+						Objects: deleteObjs[i : i+limit],
+					},
+				})
+				if err != nil {
+					return err
+				}
+
+				var errs []string
+				for _, err := range resp.Errors {
+					errs = append(errs, err.String())
+				}
+
+				if len(errs) > 0 {
+					return fmt.Errorf("failed to delete objects: %s", errs)
+				}
+
+				return nil
+			}
+		}
+	}
+	close(jobs)
+
+	var errs []string
+	for i := 0; i < numJobs; i++ {
+		err := <-results
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("s3ds: failed batch operation:\n%s", strings.Join(errs, "\n"))
+	}
+
 	return nil
+}
+
+func worker(jobs <-chan func() error, results chan<- error) {
+	for j := range jobs {
+		err := j()
+		if err != nil {
+			results <- err
+		}
+	}
 }
 
 var _ ds.Batching = (*S3Bucket)(nil)
