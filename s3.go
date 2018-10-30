@@ -185,7 +185,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		}
 
 		entry := dsq.Entry{
-			Key: *resp.Contents[index].Key,
+			Key: ds.NewKey(*resp.Contents[index].Key).String(),
 		}
 		if !q.KeysOnly {
 			value, err := s.Get(ds.NewKey(entry.Key))
