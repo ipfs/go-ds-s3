@@ -170,6 +170,8 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 				return dsq.Result{}, false
 			}
 
+			index -= len(resp.Contents)
+
 			resp, err = s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
 				Bucket:            aws.String(s.Bucket),
 				Prefix:            aws.String(s.s3Path(q.Prefix)),
@@ -180,8 +182,6 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 			if err != nil {
 				return dsq.Result{Error: err}, false
 			}
-
-			index -= len(resp.Contents)
 		}
 
 		entry := dsq.Entry{
@@ -209,9 +209,9 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 func (s *S3Bucket) Batch() (ds.Batch, error) {
 	return &s3Batch{
-		s:       s,
-		ops:     make(map[string]batchOp),
-		workers: s.Workers,
+		s:          s,
+		ops:        make(map[string]batchOp),
+		numWorkers: s.Workers,
 	}, nil
 }
 
@@ -231,9 +231,9 @@ func parseError(err error) error {
 }
 
 type s3Batch struct {
-	s       *S3Bucket
-	ops     map[string]batchOp
-	workers int
+	s          *S3Bucket
+	ops        map[string]batchOp
+	numWorkers int
 }
 
 type batchOp struct {
@@ -276,11 +276,16 @@ func (b *s3Batch) Commit() error {
 	jobs := make(chan func() error, numJobs)
 	results := make(chan error, numJobs)
 
+	numWorkers := b.numWorkers
+	if numJobs < numWorkers {
+		numWorkers = numJobs
+	}
+
 	var wg sync.WaitGroup
-	wg.Add(b.workers)
+	wg.Add(numWorkers)
 	defer wg.Wait()
 
-	for w := 0; w < b.workers; w++ {
+	for w := 0; w < numWorkers; w++ {
 		go func() {
 			defer wg.Done()
 			worker(jobs, results)
