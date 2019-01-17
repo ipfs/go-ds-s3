@@ -347,10 +347,7 @@ func (b *s3Batch) Commit() error {
 
 func worker(jobs <-chan func() error, results chan<- error) {
 	for j := range jobs {
-		err := j()
-		if err != nil {
-			results <- err
-		}
+		results <- j()
 	}
 }
 
