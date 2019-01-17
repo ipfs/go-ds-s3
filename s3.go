@@ -293,9 +293,7 @@ func (b *s3Batch) Commit() error {
 	}
 
 	for _, k := range putKeys {
-		jobs <- func() error {
-			return b.s.Put(k, b.ops[k.String()].val)
-		}
+		jobs <- b.newPutJob(k, b.ops[k.String()].val)
 	}
 
 	if len(deleteObjs) > 0 {
@@ -305,28 +303,7 @@ func (b *s3Batch) Commit() error {
 				limit = len(deleteObjs[i:])
 			}
 
-			jobs <- func() error {
-				resp, err := b.s.S3.DeleteObjects(&s3.DeleteObjectsInput{
-					Bucket: aws.String(b.s.Bucket),
-					Delete: &s3.Delete{
-						Objects: deleteObjs[i : i+limit],
-					},
-				})
-				if err != nil {
-					return err
-				}
-
-				var errs []string
-				for _, err := range resp.Errors {
-					errs = append(errs, err.String())
-				}
-
-				if len(errs) > 0 {
-					return fmt.Errorf("failed to delete objects: %s", errs)
-				}
-
-				return nil
-			}
+			jobs <- b.newDeleteJob(deleteObjs[i : i+limit])
 		}
 	}
 	close(jobs)
@@ -343,6 +320,37 @@ func (b *s3Batch) Commit() error {
 	}
 
 	return nil
+}
+
+func (b *s3Batch) newPutJob(k ds.Key, value []byte) func() error {
+	return func() error {
+		return b.s.Put(k, value)
+	}
+}
+
+func (b *s3Batch) newDeleteJob(objs []*s3.ObjectIdentifier) func() error {
+	return func() error {
+		resp, err := b.s.S3.DeleteObjects(&s3.DeleteObjectsInput{
+			Bucket: aws.String(b.s.Bucket),
+			Delete: &s3.Delete{
+				Objects: objs,
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		var errs []string
+		for _, err := range resp.Errors {
+			errs = append(errs, err.String())
+		}
+
+		if len(errs) > 0 {
+			return fmt.Errorf("failed to delete objects: %s", errs)
+		}
+
+		return nil
+	}
 }
 
 func worker(jobs <-chan func() error, results chan<- error) {
