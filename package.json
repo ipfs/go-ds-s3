@@ -6,9 +6,9 @@
   },
   "gxDependencies": [
     {
-      "hash": "QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D",
+      "hash": "Qmf4xQhNomPNhrtZc67qSnfJSjxjXs9LWvknJtSXwimPrM",
       "name": "go-datastore",
-      "version": "3.1.0"
+      "version": "3.4.1"
     }
   ],
   "gxVersion": "0.14.0",
