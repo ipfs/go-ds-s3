@@ -16,6 +16,6 @@
   "license": "MIT",
   "name": "go-ds-s3",
   "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
-  "version": "0.0.1"
+  "version": "0.0.2"
 }
 
