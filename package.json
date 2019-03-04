@@ -6,9 +6,14 @@
   },
   "gxDependencies": [
     {
-      "hash": "Qmf4xQhNomPNhrtZc67qSnfJSjxjXs9LWvknJtSXwimPrM",
+      "hash": "QmUadX5EcvrBmxAV9sE7wUWtWSqxns5K84qKJBixmcT1w9",
       "name": "go-datastore",
-      "version": "3.4.1"
+      "version": "3.6.1"
+    },
+    {
+      "hash": "QmPDEJTb3WBHmvubsLXCaqRPC8dRgvFz7A4p96dxZbJuWL",
+      "name": "go-ipfs",
+      "version": "0.4.19"
     }
   ],
   "gxVersion": "0.14.0",
@@ -16,6 +21,6 @@
   "license": "MIT",
   "name": "go-ds-s3",
   "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
-  "version": "0.0.1"
+  "version": "0.0.2"
 }
 
