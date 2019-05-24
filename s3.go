@@ -227,7 +227,7 @@ func parseError(err error) error {
 	if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == s3.ErrCodeNoSuchKey {
 		return ds.ErrNotFound
 	}
-	return nil
+	return err
 }
 
 type s3Batch struct {
