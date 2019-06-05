@@ -1,4 +1,11 @@
+# Force Go Modules
+GO111MODULE = on
+
 GOCC ?= go
+GOFLAGS ?=
+
+# make reproducable
+GOFLAGS += -asmflags=all=-trimpath="$(GOPATH)" -gcflags=all=-trimpath="$(GOPATH)"
 
 # If set, override the install location for plugins
 IPFS_PATH ?= $(HOME)/.ipfs
@@ -15,7 +22,7 @@ go.mod: FORCE
 FORCE:
 
 s3plugin.so: plugin/main.go go.mod
-	$(GOCC) build -buildmode=plugin -i -o "$@" "$<"
+	$(GOCC) build $(GOFLAGS) -buildmode=plugin -o "$@" "$<"
 	chmod +x "$@"
 
 build: s3plugin.so
