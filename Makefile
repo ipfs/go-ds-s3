@@ -1,18 +1,25 @@
-IPFS_PATH ?= ${HOME}/.ipfs
+GOCC ?= go
 
-gx:
-	go get github.com/whyrusleeping/gx
-	go get github.com/whyrusleeping/gx-go
+# If set, override the install location for plugins
+IPFS_PATH ?= $(HOME)/.ipfs
 
-deps: gx
-	gx --verbose install --global
-	gx-go rewrite
+# If set, override the IPFS version to build against. This _modifies_ the local
+# go.mod/go.sum files and permanently sets this version.
+IPFS_VERSION ?= $(lastword $(shell $(GOCC) list -m github.com/ipfs/go-ipfs))
 
-build: deps
-	go build -buildmode=plugin -o=s3plugin.so ./plugin
+.PHONY: install build
+
+go.mod: FORCE
+	./set-target.sh $(IPFS_VERSION)
+
+FORCE:
+
+s3plugin.so: plugin/main.go go.mod
+	$(GOCC) build -buildmode=plugin -i -o "$@" "$<"
+	chmod +x "$@"
+
+build: s3plugin.so
+	@echo "Built against" $(IPFS_VERSION)
 
 install: build
-	mkdir -p ${IPFS_PATH}/plugins
-	chmod +x s3plugin.so
-	rm -f ${IPFS_PATH}/plugins/s3plugin.so
-	cp s3plugin.so ${IPFS_PATH}/plugins/
+	install -Dm700 s3plugin.so "$(IPFS_PATH)/plugins/go-ds-s3.so"
