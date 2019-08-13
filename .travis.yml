@@ -9,17 +9,24 @@ go:
 env:
   global:
     - GOTFLAGS="-race"
+    - IPFS_VERSION="$(go list -f '{{.Module.Version}}' github.com/ipfs/go-ipfs)"
+    - IPFS_DISTS="https://dist.ipfs.io"
+    - IPFS_PATH="$(pwd)/ipfs_repo"
   matrix:
     - BUILD_DEPTYPE=gomod
 
 
-# disable travis install
 install:
-  - true
+  - curl "${IPFS_DISTS}/go-ipfs/${IPFS_VERSION}/go-ipfs_${IPFS_VERSION}_$(go env GOOS)-$(go env GOARCH).tar.gz" | tar -O -zx go-ipfs/ipfs > ipfs
+  - chmod 755 ipfs
+
 
 script:
   - bash <(curl -s https://raw.githubusercontent.com/ipfs/ci-helpers/master/travis-ci/run-standard-tests.sh)
-
+  - ./ipfs init
+  - make install
+  - test -x "$IPFS_PATH/plugins/go-ds-s3.so"
+  - ./ipfs version # Will fail if we install the incorrect plugin
 
 cache:
   directories:

@@ -1,0 +1,158 @@
+version: 2.1
+
+commands:
+  save-cache:
+    description: "Save the go mod & build cache."
+    parameters:
+      key:
+        description: "Cache key."
+        type: string
+        default: "go"
+    steps:
+      - save_cache:
+          key: v1-<< parameters.key >>-{{ .Branch }}-{{ checksum "go.sum" }}-{{ .Environment.CIRCLE_JOB }}
+          paths:
+            - ~/go/pkg/mod
+      - save_cache:
+          key: v1-<< parameters.key >>-{{ arch }}-{{ .Branch }}-{{ checksum "go.sum" }}-{{ .Environment.CIRCLE_JOB }}
+          paths:
+            - ~/.cache/go-build/
+  restore-cache:
+    description: "Restore the go mod & build cache."
+    parameters:
+      key:
+        description: "Cache key."
+        type: string
+        default: "go"
+    steps:
+      - restore_cache:
+          keys:
+            - v1-<< parameters.key >>-{{ .Branch }}-{{ checksum "go.sum" }}-{{ .Environment.CIRCLE_JOB }}
+            - v1-<< parameters.key >>-{{ .Branch }}-{{ checksum "go.sum" }}-
+            - v1-<< parameters.key >>-{{ .Branch }}-
+            - v1-<< parameters.key >>-master-
+      - restore_cache:
+          keys:
+            - v1-<< parameters.key >>-{{ arch }}-{{ .Branch }}-{{ checksum "go.sum" }}-{{ .Environment.CIRCLE_JOB }}
+            - v1-<< parameters.key >>-{{ arch }}-{{ .Branch }}-{{ checksum "go.sum" }}-
+            - v1-<< parameters.key >>-{{ arch }}-{{ .Branch }}-
+            - v1-<< parameters.key >>-{{ arch }}-master-
+  check-build:
+    description: "Check that the project is buildable"
+    parameters:
+      package:
+        description: "Package to check."
+        type: string
+        default: "./..."
+    steps:
+      - run:
+          name: "check build"
+          command: |
+            go list -f '{{if (len .GoFiles)}}{{.ImportPath}} {{if .Module}}{{.Module.Dir}}{{else}}{{.Dir}}{{end}}{{end}}' << parameters.package >> | grep -v /vendor/ |
+              while read -r pkg dir; do
+              echo '*** go build' "$pkg"
+              (
+                cd "$dir"
+                buildmode=archive
+                if [[ "$(go list -f '{{.Name}}')" == "main" ]]; then
+                  # plugin works even when a "main" function is missing.
+                  buildmode=plugin
+                fi
+                go build -buildmode=$buildmode -o /dev/null "$pkg"
+              )
+            done
+  test:
+    parameters:
+      package:
+        description: "Package to test."
+        type: string
+        default: "./..."
+      flags:
+        description: "Go test flags."
+        type: string
+        default: ""
+      race:
+        description: "Enable the race detector."
+        type: bool
+        default: false
+      coverage:
+        description: "Enable coverage collection."
+        type: bool
+        default: true
+    steps:
+      - run:
+          name: "Make test results directory."
+          command: |
+            mkdir -p /tmp/test-results/${CIRCLE_JOB}
+      - run:
+          name: "Run go unit tests."
+          command: |
+            gotestsum \
+              --junitfile "$(mktemp /tmp/test-results/${CIRCLE_JOB}/go-test.${CIRCLE_NODE_ID}.XXXXXX.xml)"
+              -- -v << parameters.flags >> \
+              <<# parameters.race >> -race <</parameters.race >> \
+              <<# parameters.coverage >> \
+              -coverprofile="$(mktemp /tmp/gotest.coverprofile)" \
+              -covermode=atomic \
+              <</ parameters.coverage >> \
+              $(go list -f '{{if or (len .TestGoFiles) (len .XTestGoFiles)}}{{.ImportPath}}{{end}}' ./... | grep -v /vendor/ || true | circleci tests split --split-by=timings)
+      - store_test_results:
+          when: always
+          path: /tmp/test-results
+      - run:
+          when: <<parameters.coverage>
+          name: "Uploading coverage."
+          command: |
+            bash <(curl -s https://codecov.io/bash) -cF unittests -X search -f /tmp/gotest.coverprofile
+    
+environment: &environment
+  GIT_PAGER: cat
+  GO111MODULE: "on"
+  GOPATH: ~/go
+
+executors:
+  default:
+    description: "The official CircleCI Go Docker image."
+    parameters:
+      tag:
+        description: "The `circleci/golang` Docker image version tag."
+        type: string
+        default: "1.12"
+    docker:
+      - image: circleci/golang:<< parameters.tag >>
+    environment:
+      <<: *environment
+
+jobs:
+  build:
+    executor: default
+    steps:
+      - restore-cache
+      - check-build
+      - save-cache
+  test:
+    docker:
+      - image: circleci/golang:1.12
+      - image: localstack/localstack
+    environment:
+      LOCAL_S3: 1
+      SERVICES: s3
+    executor: default
+    parallelism: 4
+    parameters:
+      race:
+        description: "Enable the race detector."
+        type: boolean
+        default: false
+    steps:
+      - restore-cache
+      - test:
+          race: << parameters.race >>
+      - save-cache
+
+workflows:
+  version: 2
+  test:
+    jobs:
+    - build
+    - test
