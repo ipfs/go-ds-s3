@@ -141,7 +141,6 @@ jobs:
       LOCAL_S3: 1
       SERVICES: s3
     executor: default
-    parallelism: 4
     parameters:
       race:
         description: "Enable the race detector."
@@ -153,6 +152,27 @@ jobs:
       - test:
           race: << parameters.race >>
       - save-cache
+  test-plugin:
+    executor: default
+    steps:
+      - checkout
+      - restore-cache
+      - run:
+          name: "Downloading IPFS"
+          command: |
+            IPFS_VERSION="$(go list -f '{{.Module.Version}}' github.com/ipfs/go-ipfs)"
+            GOOS=$(go env GOOS)
+            GOARCH=$(go env GOARCH)
+            mkdir ~/bin
+            curl "${IPFS_DISTS}/go-ipfs/${IPFS_VERSION}/go-ipfs_${IPFS_VERSION}_$(go env GOOS)-$(go env GOARCH).tar.gz" | tar -O -zx go-ipfs/ipfs > ~/bin/ipfs
+      - run:
+          name: ipfs init
+          command: ~/bin/ipfs init
+      - run: make install
+      - run:
+          name: ipfs version
+          command: ~/bin/ipfs version
+      - save-cache
 
 workflows:
   version: 2
@@ -160,3 +180,4 @@ workflows:
     jobs:
     - build
     - test
+    - test-plugin
