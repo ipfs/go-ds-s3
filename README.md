@@ -77,7 +77,7 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
 ```
 
 If you are configuring a brand new ipfs instance without any data, you can overwrite the datastore_spec file with:
-> {"mounts":[{"bucket":"peergos-test","mountpoint":"/blocks","region":"us-east-1","rootDirectory":""},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
+> {"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"us-east-1","rootDirectory":""},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
 otherwise you need to do a datastore migration. 
 
 ## Contribute
