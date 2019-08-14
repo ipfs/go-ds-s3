@@ -23,7 +23,7 @@ To update the go-ipfs, run:
 > make go.mod IPFS_VERSION=version
 ```
 ## Detailed Installation
-For an brand new ipfs instance (no data stored yet)
+For a brand new ipfs instance (no data stored yet)
 1. copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so
 2. ipfs init
 3. edit $IPFS_DIR/config to include s3 details (see Configuration below)
