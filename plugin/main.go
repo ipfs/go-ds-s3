@@ -13,6 +13,9 @@ var Plugins = []plugin.Plugin{
 	&S3Plugin{},
 }
 
+// Mark this as used and exported. "nolint" doesn't work.
+var _ = Plugins
+
 type S3Plugin struct{}
 
 func (s3p S3Plugin) Name() string {
