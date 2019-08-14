@@ -73,11 +73,11 @@ commands:
         default: ""
       race:
         description: "Enable the race detector."
-        type: bool
+        type: boolean
         default: false
       coverage:
         description: "Enable coverage collection."
-        type: bool
+        type: boolean
         default: true
     steps:
       - run:
@@ -88,27 +88,30 @@ commands:
           name: "Run go unit tests."
           command: |
             gotestsum \
-              --junitfile "$(mktemp /tmp/test-results/${CIRCLE_JOB}/go-test.${CIRCLE_NODE_ID}.XXXXXX.xml)"
+              --junitfile "$(mktemp /tmp/test-results/${CIRCLE_JOB}/go-test.${CIRCLE_NODE_ID}.XXXXXX.xml)" \
               -- -v << parameters.flags >> \
               <<# parameters.race >> -race <</parameters.race >> \
               <<# parameters.coverage >> \
-              -coverprofile="$(mktemp /tmp/gotest.coverprofile)" \
+              -coverprofile="/tmp/gotest.coverprofile" \
               -covermode=atomic \
               <</ parameters.coverage >> \
               $(go list -f '{{if or (len .TestGoFiles) (len .XTestGoFiles)}}{{.ImportPath}}{{end}}' ./... | grep -v /vendor/ || true | circleci tests split --split-by=timings)
       - store_test_results:
           when: always
           path: /tmp/test-results
-      - run:
-          when: <<parameters.coverage>
-          name: "Uploading coverage."
-          command: |
-            bash <(curl -s https://codecov.io/bash) -cF unittests -X search -f /tmp/gotest.coverprofile
+      - when:
+          condition: << parameters.coverage >>
+          steps:
+            - run:
+                name: "Uploading coverage."
+                command: |
+                  bash <(curl -s https://codecov.io/bash) -cF unittests -X search -f /tmp/gotest.coverprofile
     
 environment: &environment
   GIT_PAGER: cat
   GO111MODULE: "on"
-  GOPATH: ~/go
+  GOPATH: /home/circleci/go
+  IPFS_DISTS: https://dist.ipfs.io
 
 executors:
   default:
@@ -127,27 +130,52 @@ jobs:
   build:
     executor: default
     steps:
+      - checkout
       - restore-cache
       - check-build
       - save-cache
   test:
+    executor: default
     docker:
       - image: circleci/golang:1.12
       - image: localstack/localstack
     environment:
       LOCAL_S3: 1
       SERVICES: s3
-    executor: default
-    parallelism: 4
     parameters:
       race:
         description: "Enable the race detector."
         type: boolean
         default: false
     steps:
+      - checkout
       - restore-cache
       - test:
           race: << parameters.race >>
+      - save-cache
+  test-plugin:
+    executor: default
+    docker:
+      - image: circleci/golang:1.12.7
+    steps:
+      - checkout
+      - restore-cache
+      - run:
+          name: "Downloading IPFS"
+          command: |
+            IPFS_VERSION="$(go list -f '{{.Module.Version}}' github.com/ipfs/go-ipfs)"
+            GOOS=$(go env GOOS)
+            GOARCH=$(go env GOARCH)
+            mkdir ~/bin
+            curl "${IPFS_DISTS}/go-ipfs/${IPFS_VERSION}/go-ipfs_${IPFS_VERSION}_$(go env GOOS)-$(go env GOARCH).tar.gz" | tar -O -zx go-ipfs/ipfs > ~/bin/ipfs
+            chmod +x ~/bin/ipfs
+      - run:
+          name: ipfs init
+          command: ~/bin/ipfs init
+      - run: make install
+      - run:
+          name: ipfs version
+          command: ~/bin/ipfs version
       - save-cache
 
 workflows:
@@ -156,3 +184,4 @@ workflows:
     jobs:
     - build
     - test
+    - test-plugin
