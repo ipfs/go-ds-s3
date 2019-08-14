@@ -61,6 +61,16 @@ commands:
                 go build -buildmode=$buildmode -o /dev/null "$pkg"
               )
             done
+  lint:
+    parameters:
+      package:
+        description: "Package to test."
+        type: string
+        default: "./..."
+    steps:
+      - run:
+          name: Run goalngci-lint
+          command: golangci-lint run $(go list << parameters.package >> | circleci tests split)
   test:
     parameters:
       package:
@@ -114,6 +124,17 @@ environment: &environment
   IPFS_DISTS: https://dist.ipfs.io
 
 executors:
+  golangci:
+    description: "GolangCI Linter Image"
+    parameters:
+      tag:
+        description: "GolangCI Version"
+        type: string
+        default: "v1.17.1"
+    docker:
+      - image: golangci/golangci-lint:v1.17.1
+    environment:
+      <<: *environment
   default:
     description: "The official CircleCI Go Docker image."
     parameters:
@@ -153,10 +174,17 @@ jobs:
       - test:
           race: << parameters.race >>
       - save-cache
+  lint:
+    executor: golangci
+    steps:
+      - checkout
+      - restore-cache
+      - lint
+      - save-cache
   test-plugin:
-    executor: default
-    docker:
-      - image: circleci/golang:1.12.7
+    executor:
+      name: default
+      tag: 1.12.7
     steps:
       - checkout
       - restore-cache
@@ -185,3 +213,4 @@ workflows:
     - build
     - test
     - test-plugin
+    - lint
