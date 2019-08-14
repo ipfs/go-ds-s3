@@ -73,11 +73,11 @@ commands:
         default: ""
       race:
         description: "Enable the race detector."
-        type: bool
+        type: boolean
         default: false
       coverage:
         description: "Enable coverage collection."
-        type: bool
+        type: boolean
         default: true
     steps:
       - run:
@@ -88,27 +88,29 @@ commands:
           name: "Run go unit tests."
           command: |
             gotestsum \
-              --junitfile "$(mktemp /tmp/test-results/${CIRCLE_JOB}/go-test.${CIRCLE_NODE_ID}.XXXXXX.xml)"
+              --junitfile "$(mktemp /tmp/test-results/${CIRCLE_JOB}/go-test.${CIRCLE_NODE_ID}.XXXXXX.xml)" \
               -- -v << parameters.flags >> \
               <<# parameters.race >> -race <</parameters.race >> \
               <<# parameters.coverage >> \
-              -coverprofile="$(mktemp /tmp/gotest.coverprofile)" \
+              -coverprofile="/tmp/gotest.coverprofile" \
               -covermode=atomic \
               <</ parameters.coverage >> \
               $(go list -f '{{if or (len .TestGoFiles) (len .XTestGoFiles)}}{{.ImportPath}}{{end}}' ./... | grep -v /vendor/ || true | circleci tests split --split-by=timings)
       - store_test_results:
           when: always
           path: /tmp/test-results
-      - run:
-          when: <<parameters.coverage>
-          name: "Uploading coverage."
-          command: |
-            bash <(curl -s https://codecov.io/bash) -cF unittests -X search -f /tmp/gotest.coverprofile
+      - when:
+          condition: << parameters.coverage >>
+          steps:
+            - run:
+                name: "Uploading coverage."
+                command: |
+                  bash <(curl -s https://codecov.io/bash) -cF unittests -X search -f /tmp/gotest.coverprofile
     
 environment: &environment
   GIT_PAGER: cat
   GO111MODULE: "on"
-  GOPATH: ~/go
+  GOPATH: /home/circleci/go
 
 executors:
   default:
@@ -127,6 +129,7 @@ jobs:
   build:
     executor: default
     steps:
+      - checkout
       - restore-cache
       - check-build
       - save-cache
@@ -145,6 +148,7 @@ jobs:
         type: boolean
         default: false
     steps:
+      - checkout
       - restore-cache
       - test:
           race: << parameters.race >>
