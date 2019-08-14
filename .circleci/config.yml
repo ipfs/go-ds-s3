@@ -135,13 +135,13 @@ jobs:
       - check-build
       - save-cache
   test:
+    executor: default
     docker:
       - image: circleci/golang:1.12
       - image: localstack/localstack
     environment:
       LOCAL_S3: 1
       SERVICES: s3
-    executor: default
     parameters:
       race:
         description: "Enable the race detector."
@@ -155,6 +155,8 @@ jobs:
       - save-cache
   test-plugin:
     executor: default
+    docker:
+      - image: circleci/golang:1.12.7
     steps:
       - checkout
       - restore-cache
