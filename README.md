@@ -24,7 +24,7 @@ To update the go-ipfs, run:
 ```
 ## Detailed Installation
 For a brand new ipfs instance (no data stored yet)
-1. copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so
+1. copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so (or run `make install` if you are installing locally)
 2. ipfs init
 3. edit $IPFS_DIR/config to include s3 details (see Configuration below)
 4. overwrite $IPFS_DIR/datastore_spec as specified below (*Don't do this on an instance with existing data - it will be lost*)
