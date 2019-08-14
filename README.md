@@ -5,7 +5,7 @@ This is an implementation of the datastore interface backed by amazon s3.
 **NOTE:** Plugins only work on Linux and MacOS at the moment. You can track the progress of this issue here: https://github.com/golang/go/issues/19282
 
 ## Building and Installing
-You must build the plugin with the *exact* version of go used to build the go-ipfs binary you will use it with. 
+You must build the plugin with the *exact* version of go used to build the go-ipfs binary you will use it with. You can find the go version for go-ipfs builds from dist.ipfs.io in the build-info file, e.g. https://dist.ipfs.io/go-ipfs/v0.4.22/build-info or by running `ipfs version --all`
 
 You can this plugin by running `make build`. You can then install it into your local IPFS repo by running `make install`.
 
@@ -24,7 +24,7 @@ To update the go-ipfs, run:
 ```
 ## Detailed Installation
 For a brand new ipfs instance (no data stored yet)
-1. copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so
+1. copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so (or run `make install` if you are installing locally)
 2. ipfs init
 3. edit $IPFS_DIR/config to include s3 details (see Configuration below)
 4. overwrite $IPFS_DIR/datastore_spec as specified below (*Don't do this on an instance with existing data - it will be lost*)
