@@ -111,6 +111,7 @@ environment: &environment
   GIT_PAGER: cat
   GO111MODULE: "on"
   GOPATH: /home/circleci/go
+  IPFS_DISTS: https://dist.ipfs.io
 
 executors:
   default:
