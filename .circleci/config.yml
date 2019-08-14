@@ -166,6 +166,7 @@ jobs:
             GOARCH=$(go env GOARCH)
             mkdir ~/bin
             curl "${IPFS_DISTS}/go-ipfs/${IPFS_VERSION}/go-ipfs_${IPFS_VERSION}_$(go env GOOS)-$(go env GOARCH).tar.gz" | tar -O -zx go-ipfs/ipfs > ~/bin/ipfs
+            chmod +x ~/bin/ipfs
       - run:
           name: ipfs init
           command: ~/bin/ipfs init
