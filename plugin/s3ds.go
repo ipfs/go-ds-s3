@@ -1,4 +1,4 @@
-package main
+package plugin
 
 import (
 	"fmt"
@@ -12,9 +12,6 @@ import (
 var Plugins = []plugin.Plugin{
 	&S3Plugin{},
 }
-
-// Mark this as used and exported. "nolint" doesn't work.
-var _ = Plugins
 
 type S3Plugin struct{}
 
