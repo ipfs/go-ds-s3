@@ -145,10 +145,6 @@ func (s *S3Bucket) Delete(k ds.Key) error {
 }
 
 func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
-	if q.Orders != nil || q.Filters != nil {
-		return nil, fmt.Errorf("s3ds: filters or orders are not supported")
-	}
-
 	limit := q.Limit + q.Offset
 	if limit == 0 || limit > listMax {
 		limit = listMax
@@ -198,13 +194,26 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		index++
 		return dsq.Result{Entry: entry}, true
 	}
-
-	return dsq.ResultsFromIterator(q, dsq.Iterator{
+	results := dsq.ResultsFromIterator(q, dsq.Iterator{
 		Close: func() error {
 			return nil
 		},
 		Next: nextValue,
-	}), nil
+	})
+
+	// Apply everything else (filters and orders).
+	naiveQuery := q
+	naiveQuery.Prefix = ""
+	naiveQuery.Offset = 0
+	naiveQuery.Limit = 0
+	// Results are pre-ordered by key.
+	if len(naiveQuery.Orders) > 0 {
+		switch naiveQuery.Orders[0].(type) {
+		case dsq.OrderByKey, *dsq.OrderByKey:
+			naiveQuery.Orders = nil
+		}
+	}
+	return dsq.NaiveQueryApply(naiveQuery, results), nil
 }
 
 func (s *S3Bucket) Batch() (ds.Batch, error) {
