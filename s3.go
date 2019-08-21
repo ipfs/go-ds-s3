@@ -141,7 +141,11 @@ func (s *S3Bucket) Delete(k ds.Key) error {
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(s.s3Path(k.String())),
 	})
-	return parseError(err)
+	if isNotFound(err) {
+		// delete is idempotent
+		err = nil
+	}
+	return err
 }
 
 func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
@@ -223,8 +227,13 @@ func (s *S3Bucket) s3Path(p string) string {
 	return path.Join(s.RootDirectory, p)
 }
 
+func isNotFound(err error) bool {
+	s3Err, ok := err.(awserr.Error)
+	return ok && s3Err.Code() == s3.ErrCodeNoSuchKey
+}
+
 func parseError(err error) error {
-	if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == s3.ErrCodeNoSuchKey {
+	if isNotFound(err) {
 		return ds.ErrNotFound
 	}
 	return err
@@ -336,12 +345,16 @@ func (b *s3Batch) newDeleteJob(objs []*s3.ObjectIdentifier) func() error {
 				Objects: objs,
 			},
 		})
-		if err != nil {
+		if err != nil && !isNotFound(err) {
 			return err
 		}
 
 		var errs []string
 		for _, err := range resp.Errors {
+			if err.Code != nil && *err.Code == s3.ErrCodeNoSuchKey {
+				// idempotent
+				continue
+			}
 			errs = append(errs, err.String())
 		}
 
