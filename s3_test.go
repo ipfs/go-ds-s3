@@ -26,13 +26,13 @@ func TestSuite(t *testing.T) {
 
 	s3ds, err := NewS3Datastore(config)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	if hasLocalS3 {
 		err = devMakeBucket(s3ds.S3, "localBucketName")
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 	}
 
