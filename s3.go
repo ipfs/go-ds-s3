@@ -95,7 +95,7 @@ func (s *S3Bucket) Put(k ds.Key, value []byte) error {
 		Key:    aws.String(s.s3Path(k.String())),
 		Body:   bytes.NewReader(value),
 	})
-	return parseError(err)
+	return err
 }
 
 func (s *S3Bucket) Get(k ds.Key) ([]byte, error) {
@@ -104,7 +104,10 @@ func (s *S3Bucket) Get(k ds.Key) ([]byte, error) {
 		Key:    aws.String(s.s3Path(k.String())),
 	})
 	if err != nil {
-		return nil, parseError(err)
+		if isNotFound(err) {
+			return nil, ds.ErrNotFound
+		}
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -230,13 +233,6 @@ func (s *S3Bucket) s3Path(p string) string {
 func isNotFound(err error) bool {
 	s3Err, ok := err.(awserr.Error)
 	return ok && s3Err.Code() == s3.ErrCodeNoSuchKey
-}
-
-func parseError(err error) error {
-	if isNotFound(err) {
-		return ds.ErrNotFound
-	}
-	return err
 }
 
 type s3Batch struct {
