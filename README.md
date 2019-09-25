@@ -5,32 +5,54 @@ This is an implementation of the datastore interface backed by amazon s3.
 **NOTE:** Plugins only work on Linux and MacOS at the moment. You can track the progress of this issue here: https://github.com/golang/go/issues/19282
 
 ## Building and Installing
-You must build the plugin with the *exact* version of go used to build the go-ipfs binary you will use it with. You can find the go version for go-ipfs builds from dist.ipfs.io in the build-info file, e.g. https://dist.ipfs.io/go-ipfs/v0.4.22/build-info or by running `ipfs version --all`
 
-You can this plugin by running `make build`. You can then install it into your local IPFS repo by running `make install`.
+You must build the plugin with the *exact* version of go used to build the go-ipfs binary you will use it with. You can find the go version for go-ipfs builds from dist.ipfs.io in the build-info file, e.g. https://dist.ipfs.io/go-ipfs/v0.4.22/build-info or by running `ipfs version --all`.
 
-Plugins need to be built against the correct version of go-ipfs. This package generally tracks the latest go-ipfs release but if you need to build against a different version, please set the `IPFS_VERSION` environment variable.
+In addition to needing the exact version of go, you need to correctly specify the exact version of go-ipfs.
 
-You can set `IPFS_VERSION` to:
+* If you installed go-ipfs via ipfs-update (or from dist.ipfs.io), you'll need to build this plugin with `make IPFS_VERSION=version`.
+* If you installed go-ipfs via `go get github.com/ipfs/go-ipfs/cmd/ipfs@$SOME_VERSION`, you'll need to build this plugin with `make IPFS_VERSION=$SOME_VERSION`.
+* If you installed go-ipfs by running `make` in the go-ipfs source, you'll need to build this plugin with `IPFS_VERSION=/path/to/go-ipfs/source`.
 
-* `vX.Y.Z` to build against that version of IPFS.
-* `$commit` or `$branch` to build against a specific go-ipfs commit or branch.
-* `/absolute/path/to/source` to build against a specific go-ipfs checkout.
+You can then install it into your local IPFS repo by running `make install`.
 
-To update the go-ipfs, run:
+## Bundling
+
+As go plugins can be finicky to correctly compile and install, you may want to consider bundling this plugin and re-building go-ipfs. If you do it this way, you won't need to install the `.so` file in your local repo and you won't need to worry about getting all the versions to match up.
 
 ```bash
-> make go.mod IPFS_VERSION=version
+# We use go modules for everything.
+> export GO111MODULE=on
+
+# Clone go-ipfs.
+> git clone github.com/ipfs/go-ipfs
+> cd go-ipfs
+
+# Pull in the datastore plugin (you can specify a version other than latest if you'd like).
+> go get github.com/ipfs/go-ds-s3@latest
+
+# Add the plugin to the preload list.
+> echo "s3ds github.com/ipfs/go-ds-s3/plugin 0" > plugin/loader/preload_list
+
+# Rebuild go-ipfs with the plugin
+> make build
+
+# (Optionally) install go-ipfs
+> make install
 ```
+
 ## Detailed Installation
-For a brand new ipfs instance (no data stored yet)
-1. copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so (or run `make install` if you are installing locally)
-2. ipfs init
-3. edit $IPFS_DIR/config to include s3 details (see Configuration below)
-4. overwrite $IPFS_DIR/datastore_spec as specified below (*Don't do this on an instance with existing data - it will be lost*)
+
+For a brand new ipfs instance (no data stored yet):
+
+1. Copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so (or run `make install` if you are installing locally).
+2. Run `ipfs init`.
+3. Edit $IPFS_DIR/config to include s3 details (see Configuration below).
+4. Overwrite `$IPFS_DIR/datastore_spec` as specified below (*Don't do this on an instance with existing data - it will be lost*).
 
 ### Configuration
-config file should include the following:
+
+The config file should include the following:
 ```json
 {
   "Datastore": {
@@ -51,7 +73,8 @@ config file should include the following:
           "type": "measure"
         },
 ```
-If the access and secret key are blank they will be loaded from the usual ~/.aws/
+
+If the access and secret key are blank they will be loaded from the usual ~/.aws/.
 If you are on another S3 compatible provider, e.g. Linode, then your config should be:
 
 ```json
@@ -77,8 +100,12 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
 ```
 
 If you are configuring a brand new ipfs instance without any data, you can overwrite the datastore_spec file with:
-> {"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"us-east-1","rootDirectory":""},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
-otherwise you need to do a datastore migration. 
+
+```
+{"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"us-east-1","rootDirectory":""},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
+```
+
+Otherwise, you need to do a datastore migration.
 
 ## Contribute
 
