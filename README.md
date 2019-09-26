@@ -65,6 +65,7 @@ The config file should include the following:
             "type": "s3ds",
             "region": "us-east-1",
             "bucket": "$bucketname",
+            "rootDirectory": "$bucketsubdirectory",
             "accessKey": "",
             "secretKey": ""
           },
@@ -89,6 +90,7 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
             "type": "s3ds",
             "region": "us-east-1",
             "bucket": "$bucketname",
+            "rootDirectory": "$bucketsubdirectory",
             "regionEndpoint": "us-east-1.linodeobjects.com",
             "accessKey": "",
             "secretKey": ""
@@ -102,7 +104,7 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
 If you are configuring a brand new ipfs instance without any data, you can overwrite the datastore_spec file with:
 
 ```
-{"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"us-east-1","rootDirectory":""},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
+{"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"us-east-1","rootDirectory":"$bucketsubdirectory"},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
 ```
 
 Otherwise, you need to do a datastore migration.
