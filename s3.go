@@ -176,15 +176,18 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 	// S3 store a "/foo" key as "foo" so we need to trim the leading "/"
 	q.Prefix = strings.TrimPrefix(q.Prefix, "/")
 
-	limit := q.Limit + q.Offset
-	if limit == 0 || limit > listMax {
-		limit = listMax
+	sent := 0
+	queryLimit := func() int64 {
+		if max := q.Limit - sent; q.Limit <= 0 && max < listMax {
+			return int64(max)
+		}
+		return listMax
 	}
 
 	resp, err := s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:  aws.String(s.Bucket),
 		Prefix:  aws.String(s.s3Path(q.Prefix)),
-		MaxKeys: aws.Int64(int64(limit)),
+		MaxKeys: aws.Int64(queryLimit()),
 	})
 	if err != nil {
 		return nil, err
@@ -192,6 +195,10 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 	index := q.Offset
 	nextValue := func() (dsq.Result, bool) {
+		if q.Limit > 0 && sent >= q.Limit {
+			return dsq.Result{}, false
+		}
+
 		for index >= len(resp.Contents) {
 			if !*resp.IsTruncated {
 				return dsq.Result{}, false
@@ -203,7 +210,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 				Bucket:            aws.String(s.Bucket),
 				Prefix:            aws.String(s.s3Path(q.Prefix)),
 				Delimiter:         aws.String("/"),
-				MaxKeys:           aws.Int64(listMax),
+				MaxKeys:           aws.Int64(queryLimit()),
 				ContinuationToken: resp.NextContinuationToken,
 			})
 			if err != nil {
@@ -224,6 +231,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		}
 
 		index++
+		sent++
 		return dsq.Result{Entry: entry}, true
 	}
 
