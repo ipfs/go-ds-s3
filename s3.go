@@ -156,6 +156,9 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		return nil, fmt.Errorf("s3ds: filters or orders are not supported")
 	}
 
+	// S3 store a "/foo" key as "foo" so we need to trim the leading "/"
+	q.Prefix = strings.TrimPrefix(q.Prefix, "/")
+
 	limit := q.Limit + q.Offset
 	if limit == 0 || limit > listMax {
 		limit = listMax
