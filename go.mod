@@ -2,11 +2,11 @@ module github.com/ipfs/go-ds-s3
 
 require (
 	github.com/aws/aws-sdk-go v1.25.7
-	github.com/ipfs/go-datastore v0.2.0
+	github.com/ipfs/go-datastore v0.3.1
 	github.com/ipfs/go-ipfs v0.4.22
 )
 
-go 1.11
+go 1.12
 
 replace github.com/go-critic/go-critic v0.0.0-20181204210945-ee9bf5809ead => github.com/go-critic/go-critic v0.4.0
 
