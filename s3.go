@@ -98,6 +98,10 @@ func (s *S3Bucket) Put(k ds.Key, value []byte) error {
 	return err
 }
 
+func (s *S3Bucket) Sync(prefix ds.Key) error {
+	return nil
+}
+
 func (s *S3Bucket) Get(k ds.Key) ([]byte, error) {
 	resp, err := s.S3.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(s.Bucket),
