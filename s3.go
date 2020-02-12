@@ -173,8 +173,9 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		return nil, fmt.Errorf("s3ds: filters or orders are not supported")
 	}
 
-	// S3 store a "/foo" key as "foo" so we need to trim the leading "/"
-	q.Prefix = strings.TrimPrefix(q.Prefix, "/")
+	// Normalize the path and strip the leading / as S3 stores values
+	// without the leading /.
+	prefix := ds.NewKey(q.Prefix).String()[1:]
 
 	sent := 0
 	queryLimit := func() int64 {
@@ -186,7 +187,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 	resp, err := s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:  aws.String(s.Bucket),
-		Prefix:  aws.String(s.s3Path(q.Prefix)),
+		Prefix:  aws.String(s.s3Path(prefix)),
 		MaxKeys: aws.Int64(queryLimit()),
 	})
 	if err != nil {
@@ -208,7 +209,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 			resp, err = s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
 				Bucket:            aws.String(s.Bucket),
-				Prefix:            aws.String(s.s3Path(q.Prefix)),
+				Prefix:            aws.String(s.s3Path(prefix)),
 				Delimiter:         aws.String("/"),
 				MaxKeys:           aws.Int64(queryLimit()),
 				ContinuationToken: resp.NextContinuationToken,
