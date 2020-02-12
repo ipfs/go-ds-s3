@@ -1,12 +1,12 @@
 version: 2.1
 
 orbs:
-  ci-go: ipfs/ci-go@0.1
+  ci-go: ipfs/ci-go@0.2.1
 
 executors:
   go-s3:
     docker:
-      - image: circleci/golang:1.12.7
+      - image: circleci/golang:1.13.7
       - image: localstack/localstack
     environment:
       LOCAL_S3: 1
@@ -46,4 +46,5 @@ workflows:
     - ci-go/lint
     - ci-go/test:
         executor: go-s3
+        flags: "-timeout 30m" # S3 is _slow_.
     - test-plugin
