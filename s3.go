@@ -222,9 +222,10 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 	}
 
 	resp, err := s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket:  aws.String(s.Bucket),
-		Prefix:  aws.String(s.s3Path(prefix)),
-		MaxKeys: aws.Int64(queryLimit()),
+		Bucket:    aws.String(s.Bucket),
+		Prefix:    aws.String(s.s3Path(prefix)),
+		Delimiter: aws.String("/"),
+		MaxKeys:   aws.Int64(queryLimit()),
 	})
 	if err != nil {
 		return nil, err
