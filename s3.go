@@ -233,6 +233,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 	index := q.Offset
 	nextValue := func() (dsq.Result, bool) {
+	tryAgain:
 		if q.Limit > 0 && sent >= q.Limit {
 			return dsq.Result{}, false
 		}
@@ -262,8 +263,18 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		}
 		if !q.KeysOnly {
 			value, err := s.Get(ds.NewKey(entry.Key))
-			if err != nil {
-				return dsq.Result{Error: err}, false
+			switch err {
+			case nil:
+			case ds.ErrNotFound:
+				// This just means the value got deleted in the
+				// mean-time. That's not an error.
+				//
+				// We could use a loop instead of a goto, but
+				// this is one of those rare cases where a goto
+				// is easier to understand.
+				goto tryAgain
+			default:
+				return dsq.Result{Entry: entry, Error: err}, false
 			}
 			entry.Value = value
 		}
