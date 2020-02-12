@@ -168,9 +168,45 @@ func (s *S3Bucket) Delete(k ds.Key) error {
 	return err
 }
 
+func querySupported(q dsq.Query) bool {
+	if len(q.Orders) > 0 {
+		switch q.Orders[0].(type) {
+		case dsq.OrderByKey, *dsq.OrderByKey:
+			// We order by key by default.
+		default:
+			return false
+		}
+	}
+	return len(q.Filters) == 0
+}
+
 func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
-	if q.Orders != nil || q.Filters != nil {
-		return nil, fmt.Errorf("s3ds: filters or orders are not supported")
+	// Handle ordering
+	if !querySupported(q) {
+		// OK, time to do this the naive way.
+
+		// Skip the stuff we can't apply.
+		baseQuery := q
+		baseQuery.Filters = nil
+		baseQuery.Orders = nil
+		baseQuery.Limit = 0  // needs to apply after we order
+		baseQuery.Offset = 0 // ditto.
+
+		// perform the base query.
+		res, err := s.Query(baseQuery)
+		if err != nil {
+			return nil, err
+		}
+
+		// fix the query
+		res = dsq.ResultsReplaceQuery(res, q)
+
+		// Remove the prefix, S3 has already handled it.
+		naiveQuery := q
+		naiveQuery.Prefix = ""
+
+		// Apply the rest of the query
+		return dsq.NaiveQueryApply(naiveQuery, res), nil
 	}
 
 	// Normalize the path and strip the leading / as S3 stores values
