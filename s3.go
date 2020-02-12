@@ -215,8 +215,8 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 	sent := 0
 	queryLimit := func() int64 {
-		if max := q.Limit - sent; q.Limit <= 0 && max < listMax {
-			return int64(max)
+		if q.Limit > 0 && (q.Limit-sent) < listMax {
+			return int64(q.Limit - sent)
 		}
 		return listMax
 	}
