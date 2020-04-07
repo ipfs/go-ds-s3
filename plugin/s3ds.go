@@ -23,7 +23,7 @@ func (s3p S3Plugin) Version() string {
 	return "0.0.1"
 }
 
-func (s3p S3Plugin) Init() error {
+func (s3p S3Plugin) Init(env *plugin.Environment) error {
 	return nil
 }
 
