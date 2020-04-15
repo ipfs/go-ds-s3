@@ -1,12 +1,12 @@
 version: 2.1
 
 orbs:
-  ci-go: ipfs/ci-go@0.1
+  ci-go: ipfs/ci-go@0.2.9
 
 executors:
   go-s3:
     docker:
-      - image: circleci/golang:1.13.10
+      - image: cimg/go:1.14.1
       - image: localstack/localstack
     environment:
       LOCAL_S3: 1
@@ -16,7 +16,6 @@ jobs:
   test-plugin:
     executor:
       name: ci-go/default
-      tag: 1.13.10
     steps:
       - checkout
       - ci-go/restore-cache
