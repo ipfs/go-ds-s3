@@ -32,6 +32,10 @@ const (
 	deleteMax = 1000
 
 	defaultWorkers = 100
+
+	// credsRefreshWindow, subtracted from the endpointcred's expiration time, is the
+	// earliest time the endpoint creds can be refreshed.
+	credsRefreshWindow = 2 * time.Minute
 )
 
 type S3Bucket struct {
@@ -73,7 +77,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 		&credentials.SharedCredentialsProvider{},
 		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(sess)},
 		endpointcreds.NewProviderClient(*d.Config, d.Handlers, conf.CredentialsEndpoint,
-			func(p *endpointcreds.Provider) { p.ExpiryWindow = 5 * time.Minute },
+			func(p *endpointcreds.Provider) { p.ExpiryWindow = credsRefreshWindow },
 		),
 	})
 
