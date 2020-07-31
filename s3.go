@@ -7,11 +7,14 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/credentials/endpointcreds"
+	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -29,6 +32,10 @@ const (
 	deleteMax = 1000
 
 	defaultWorkers = 100
+
+	// credsRefreshWindow, subtracted from the endpointcred's expiration time, is the
+	// earliest time the endpoint creds can be refreshed.
+	credsRefreshWindow = 2 * time.Minute
 )
 
 type S3Bucket struct {
@@ -37,14 +44,15 @@ type S3Bucket struct {
 }
 
 type Config struct {
-	AccessKey      string
-	SecretKey      string
-	SessionToken   string
-	Bucket         string
-	Region         string
-	RegionEndpoint string
-	RootDirectory  string
-	Workers        int
+	AccessKey           string
+	SecretKey           string
+	SessionToken        string
+	Bucket              string
+	Region              string
+	RegionEndpoint      string
+	RootDirectory       string
+	Workers             int
+	CredentialsEndpoint string
 }
 
 func NewS3Datastore(conf Config) (*S3Bucket, error) {
@@ -58,6 +66,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 		return nil, fmt.Errorf("failed to create new session: %s", err)
 	}
 
+	d := defaults.Get()
 	creds := credentials.NewChainCredentials([]credentials.Provider{
 		&credentials.StaticProvider{Value: credentials.Value{
 			AccessKeyID:     conf.AccessKey,
@@ -67,6 +76,9 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 		&credentials.EnvProvider{},
 		&credentials.SharedCredentialsProvider{},
 		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(sess)},
+		endpointcreds.NewProviderClient(*d.Config, d.Handlers, conf.CredentialsEndpoint,
+			func(p *endpointcreds.Provider) { p.ExpiryWindow = credsRefreshWindow },
+		),
 	})
 
 	if conf.RegionEndpoint != "" {
@@ -75,6 +87,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 	}
 
 	awsConfig.WithCredentials(creds)
+	awsConfig.CredentialsChainVerboseErrors = aws.Bool(true)
 	awsConfig.WithRegion(conf.Region)
 
 	sess, err = session.NewSession(awsConfig)
