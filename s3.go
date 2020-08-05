@@ -276,7 +276,7 @@ func (s *S3Bucket) s3Path(p string) string {
 func (s *S3Bucket) cacheHas(key ds.Key) bool {
 	s.keysMutex.RLock()
 	_, exists := s.keys[key]
-	s.keysMutex.RLock()
+	s.keysMutex.RUnlock()
 	return exists
 }
 
