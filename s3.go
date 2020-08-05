@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -33,7 +34,9 @@ const (
 
 type S3Bucket struct {
 	Config
-	S3 *s3.S3
+	S3        *s3.S3
+	keys      map[ds.Key]bool
+	keysMutex sync.RWMutex
 }
 
 type Config struct {
@@ -45,6 +48,7 @@ type Config struct {
 	RegionEndpoint string
 	RootDirectory  string
 	Workers        int
+	CacheKeys      bool
 }
 
 func NewS3Datastore(conf Config) (*S3Bucket, error) {
@@ -83,10 +87,31 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 	}
 	s3obj := s3.New(sess)
 
-	return &S3Bucket{
+	bucket := &S3Bucket{
 		S3:     s3obj,
 		Config: conf,
-	}, nil
+	}
+
+	if conf.CacheKeys {
+		bucket.keys = make(map[ds.Key]bool)
+
+		if err := bucket.fetchKeyCache(); err != nil {
+			return nil, err
+		}
+
+		go func() {
+			for {
+				time.Sleep(time.Minute)
+
+				err := bucket.fetchKeyCache()
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+		}()
+	}
+
+	return bucket, nil
 }
 
 func (s *S3Bucket) Put(k ds.Key, value []byte) error {
@@ -95,6 +120,9 @@ func (s *S3Bucket) Put(k ds.Key, value []byte) error {
 		Key:    aws.String(s.s3Path(k.String())),
 		Body:   bytes.NewReader(value),
 	})
+	if s.CacheKeys {
+		s.cachePut(k)
+	}
 	return err
 }
 
@@ -119,14 +147,18 @@ func (s *S3Bucket) Get(k ds.Key) ([]byte, error) {
 }
 
 func (s *S3Bucket) Has(k ds.Key) (exists bool, err error) {
-	_, err = s.GetSize(k)
-	if err != nil {
-		if err == ds.ErrNotFound {
-			return false, nil
+	if s.CacheKeys {
+		return s.cacheHas(k), nil
+	} else {
+		_, err = s.GetSize(k)
+		if err != nil {
+			if err == ds.ErrNotFound {
+				return false, nil
+			}
+			return false, err
 		}
-		return false, err
+		return true, nil
 	}
-	return true, nil
 }
 
 func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
@@ -151,6 +183,9 @@ func (s *S3Bucket) Delete(k ds.Key) error {
 	if isNotFound(err) {
 		// delete is idempotent
 		err = nil
+	}
+	if s.CacheKeys {
+		s.cacheDel(k)
 	}
 	return err
 }
@@ -236,6 +271,72 @@ func (s *S3Bucket) Close() error {
 
 func (s *S3Bucket) s3Path(p string) string {
 	return path.Join(s.RootDirectory, p)
+}
+
+func (s *S3Bucket) cacheHas(key ds.Key) bool {
+	s.keysMutex.RLock()
+	_, exists := s.keys[key]
+	s.keysMutex.RLock()
+	return exists
+}
+
+func (s *S3Bucket) cachePut(key ds.Key) {
+	s.keysMutex.Lock()
+	s.keys[key] = true
+	s.keysMutex.Unlock()
+}
+
+func (s *S3Bucket) cacheDel(key ds.Key) {
+	s.keysMutex.Lock()
+	delete(s.keys, key)
+	s.keysMutex.Unlock()
+}
+
+func (s *S3Bucket) fetchKeyCache() error {
+	results, err := s.Query(dsq.Query{
+		KeysOnly: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	local := map[ds.Key]bool{}
+	localOnly := map[ds.Key]bool{}
+	notLocal := map[ds.Key]bool{}
+
+	for {
+		result, notfinished := results.NextSync()
+		if !notfinished {
+			break
+		}
+		local[ds.NewKey(result.Key)] = true
+	}
+
+	// Sweep
+	s.keysMutex.RLock()
+	for cacheKey := range s.keys {
+		if _, ok := local[cacheKey]; !ok {
+			notLocal[cacheKey] = true
+		}
+	}
+
+	for localKey := range local {
+		if _, ok := s.keys[localKey]; !ok {
+			localOnly[localKey] = true
+		}
+	}
+	s.keysMutex.RUnlock()
+
+	// Apply
+	for notLocalKey := range notLocal {
+		s.cacheDel(notLocalKey)
+	}
+
+	for localOnlyKey := range localOnly {
+		s.cachePut(localOnlyKey)
+	}
+
+	return nil
 }
 
 func isNotFound(err error) bool {

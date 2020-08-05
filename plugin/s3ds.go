@@ -91,6 +91,14 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 			}
 		}
 
+		var cacheKeys bool
+		if v, ok := m["cacheKeys"]; ok {
+			cacheKeys, ok = v.(bool)
+			if !ok {
+				return nil, fmt.Errorf("s3ds: cacheKeys not a boolean")
+			}
+		}
+
 		return &S3Config{
 			cfg: s3ds.Config{
 				Region:         region,
@@ -101,6 +109,7 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 				RootDirectory:  rootDirectory,
 				Workers:        workers,
 				RegionEndpoint: endpoint,
+				CacheKeys:      cacheKeys,
 			},
 		}, nil
 	}
