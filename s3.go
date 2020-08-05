@@ -35,7 +35,7 @@ const (
 type S3Bucket struct {
 	Config
 	S3        *s3.S3
-	keys      map[ds.Key]bool
+	keys      map[ds.Key]int
 	keysMutex sync.RWMutex
 }
 
@@ -93,7 +93,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 	}
 
 	if conf.CacheKeys {
-		bucket.keys = make(map[ds.Key]bool)
+		bucket.keys = make(map[ds.Key]int)
 
 		if err := bucket.fetchKeyCache(); err != nil {
 			return nil, err
@@ -121,7 +121,7 @@ func (s *S3Bucket) Put(k ds.Key, value []byte) error {
 		Body:   bytes.NewReader(value),
 	})
 	if s.CacheKeys {
-		s.cachePut(k)
+		s.cachePut(k, -1)
 	}
 	return err
 }
@@ -162,6 +162,12 @@ func (s *S3Bucket) Has(k ds.Key) (exists bool, err error) {
 }
 
 func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
+	if s.CacheKeys {
+		i, exists := s.cacheGet(k)
+		if exists && i != -1 {
+			return i, nil
+		}
+	}
 	resp, err := s.S3.HeadObject(&s3.HeadObjectInput{
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(s.s3Path(k.String())),
@@ -172,7 +178,13 @@ func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 		}
 		return -1, err
 	}
-	return int(*resp.ContentLength), nil
+	size = int(*resp.ContentLength)
+
+	if s.CacheKeys {
+		s.cachePut(k, size)
+	}
+
+	return
 }
 
 func (s *S3Bucket) Delete(k ds.Key) error {
@@ -273,16 +285,21 @@ func (s *S3Bucket) s3Path(p string) string {
 	return path.Join(s.RootDirectory, p)
 }
 
-func (s *S3Bucket) cacheHas(key ds.Key) bool {
+func (s *S3Bucket) cacheGet(key ds.Key) (int, bool) {
 	s.keysMutex.RLock()
-	_, exists := s.keys[key]
+	i, exists := s.keys[key]
 	s.keysMutex.RUnlock()
-	return exists
+	return i, exists
 }
 
-func (s *S3Bucket) cachePut(key ds.Key) {
+func (s *S3Bucket) cacheHas(key ds.Key) (exists bool) {
+	_, exists = s.cacheGet(key)
+	return
+}
+
+func (s *S3Bucket) cachePut(key ds.Key, size int) {
 	s.keysMutex.Lock()
-	s.keys[key] = true
+	s.keys[key] = size
 	s.keysMutex.Unlock()
 }
 
@@ -300,8 +317,8 @@ func (s *S3Bucket) fetchKeyCache() error {
 		return err
 	}
 
-	local := map[ds.Key]bool{}
-	localOnly := map[ds.Key]bool{}
+	local := map[ds.Key]int{}
+	localOnly := map[ds.Key]int{}
 	notLocal := map[ds.Key]bool{}
 
 	for {
@@ -309,7 +326,7 @@ func (s *S3Bucket) fetchKeyCache() error {
 		if !notfinished {
 			break
 		}
-		local[ds.NewKey(result.Key)] = true
+		local[ds.NewKey(result.Key)] = result.Size
 	}
 
 	// Sweep
@@ -321,8 +338,8 @@ func (s *S3Bucket) fetchKeyCache() error {
 	}
 
 	for localKey := range local {
-		if _, ok := s.keys[localKey]; !ok {
-			localOnly[localKey] = true
+		if i, ok := s.keys[localKey]; !ok {
+			localOnly[localKey] = i
 		}
 	}
 	s.keysMutex.RUnlock()
@@ -332,8 +349,8 @@ func (s *S3Bucket) fetchKeyCache() error {
 		s.cacheDel(notLocalKey)
 	}
 
-	for localOnlyKey := range localOnly {
-		s.cachePut(localOnlyKey)
+	for localOnlyKey, i := range localOnly {
+		s.cachePut(localOnlyKey, i)
 	}
 
 	return nil
