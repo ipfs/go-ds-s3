@@ -166,6 +166,12 @@ func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 		i, exists := s.cacheGet(k)
 		if exists && i != -1 {
 			return i, nil
+		} else {
+			if exists {
+				fmt.Println("MISS: Key", k, "existed in cache, but -1")
+			} else {
+				fmt.Println("MISS: Key", k, "did not exist in cache")
+			}
 		}
 	}
 	resp, err := s.S3.HeadObject(&s3.HeadObjectInput{
@@ -182,6 +188,7 @@ func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 
 	if s.CacheKeys {
 		s.cachePut(k, size)
+		fmt.Println("PUT Key", k, "in cache")
 	}
 
 	return
