@@ -101,7 +101,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 
 		go func() {
 			for {
-				time.Sleep(time.Minute)
+				time.Sleep(5 * time.Minute)
 
 				err := bucket.fetchKeyCache()
 				if err != nil {
