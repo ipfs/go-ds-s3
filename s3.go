@@ -167,10 +167,10 @@ func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 		if exists && i != -1 {
 			return i, nil
 		} else {
-			if exists {
-				fmt.Println("MISS: Key", k, "existed in cache, but -1")
+			if !exists {
+				return -1, ds.ErrNotFound
 			} else {
-				fmt.Println("MISS: Key", k, "did not exist in cache")
+				fmt.Println("MISS: Key", k, "existed in cache, but -1")
 			}
 		}
 	}
