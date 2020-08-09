@@ -176,7 +176,7 @@ func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 			if !exists {
 				return -1, ds.ErrNotFound
 			} else {
-				cacheLog.Warn("GetSize: Key", k, "existed in cache, but was -1")
+				cacheLog.Warn("GetSize: Key ", k, " existed in cache, but was -1")
 			}
 		}
 	}
@@ -194,7 +194,7 @@ func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 
 	if s.CacheKeys {
 		s.cachePut(k, size)
-		cacheLog.Debug("GetSize: Key", k, "put in cache")
+		cacheLog.Debug("GetSize: Put key ", k, " in cache")
 	}
 
 	return
@@ -299,11 +299,11 @@ func (s *S3Bucket) s3Path(p string) string {
 }
 
 func (s *S3Bucket) cacheGet(key ds.Key) (int, bool) {
-	cacheLog.Debug("cacheGet: RLock for", key)
+	cacheLog.Debug("cacheGet: RLock for   ", key)
 	s.keysMutex.RLock()
 	i, exists := s.keys[key]
 	s.keysMutex.RUnlock()
-	cacheLog.Debug("cacheGet: RUnlock for", key)
+	cacheLog.Debug("cacheGet: RUnlock for ", key)
 	return i, exists
 }
 
@@ -313,19 +313,19 @@ func (s *S3Bucket) cacheHas(key ds.Key) (exists bool) {
 }
 
 func (s *S3Bucket) cachePut(key ds.Key, size int) {
-	log.Debug("cachePut: Write Lock for", key)
+	log.Debug("cachePut: WRITE Lock for   ", key)
 	s.keysMutex.Lock()
 	s.keys[key] = size
 	s.keysMutex.Unlock()
-	log.Debug("cachePut: Write Unlock for", key)
+	log.Debug("cachePut: WRITE Unlock for ", key)
 }
 
 func (s *S3Bucket) cacheDel(key ds.Key) {
-	log.Debug("cacheDel: Write Lock for", key)
+	log.Debug("cacheDel: WRITE Lock for   ", key)
 	s.keysMutex.Lock()
 	delete(s.keys, key)
 	s.keysMutex.Unlock()
-	log.Debug("cacheDel: Write Unlock for", key)
+	log.Debug("cacheDel: WRITE Unlock for ", key)
 }
 
 func (s *S3Bucket) fetchKeyCache() error {
@@ -334,7 +334,7 @@ func (s *S3Bucket) fetchKeyCache() error {
 		KeysOnly: true,
 	})
 	if err != nil {
-		log.Warn("fetchKeyCache: Fetching key cache failed with", err)
+		log.Warn("fetchKeyCache: Fetching key cache failed with ", err)
 		return err
 	}
 
@@ -367,12 +367,12 @@ func (s *S3Bucket) fetchKeyCache() error {
 
 	// Apply
 	for notLocalKey := range notLocal {
-		log.Debug("fetchKeyCache: Removing key", notLocalKey)
+		log.Debug("fetchKeyCache: Removing key ", notLocalKey)
 		s.cacheDel(notLocalKey)
 	}
 
 	for localOnlyKey, i := range localOnly {
-		log.Debug("fetchKeyCache: Adding key", localOnlyKey)
+		log.Debug("fetchKeyCache: Adding key ", localOnlyKey)
 		s.cachePut(localOnlyKey, i)
 	}
 
