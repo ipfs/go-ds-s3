@@ -111,7 +111,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 
 				err := bucket.fetchKeyCache()
 				if err != nil {
-					fmt.Println(err)
+					log.Error("fetchKeyCache encountered error: ", err)
 				}
 			}
 		}()
@@ -345,6 +345,9 @@ func (s *S3Bucket) fetchKeyCache() error {
 	for {
 		result, notfinished := results.NextSync()
 		if !notfinished {
+			if result.Error != nil {
+				return result.Error
+			}
 			break
 		}
 		local[ds.NewKey(result.Key)] = result.Size
