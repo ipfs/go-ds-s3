@@ -266,7 +266,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		}
 
 		entry := dsq.Entry{
-			Key:  ds.NewKey(*resp.Contents[index].Key).String(),
+			Key:  ds.NewKey(s.removeS3Path(*resp.Contents[index].Key, true)).String(),
 			Size: int(*resp.Contents[index].Size),
 		}
 		if !q.KeysOnly {
@@ -303,6 +303,16 @@ func (s *S3Bucket) Close() error {
 
 func (s *S3Bucket) s3Path(p string) string {
 	return path.Join(s.RootDirectory, p)
+}
+
+func (s *S3Bucket) removeS3Path(p string, withLeadingSlashOnRootDir bool) string {
+	var prefix = ""
+	if withLeadingSlashOnRootDir {
+		prefix = path.Join("/", s.RootDirectory)
+	} else {
+		prefix = s.RootDirectory
+	}
+	return path.Join("/", strings.TrimPrefix(p, prefix))
 }
 
 func (s *S3Bucket) cacheGet(key ds.Key) (int, bool) {
