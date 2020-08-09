@@ -376,6 +376,12 @@ func (s *S3Bucket) fetchKeyCache() error {
 		s.cachePut(localOnlyKey, i)
 	}
 
+	s.keysMutex.RLock()
+	size := len(s.keys)
+	s.keysMutex.RUnlock()
+
+	log.Debug("fetchKeyCache: Key cache now contains ", size, " keys")
+
 	return nil
 }
 
