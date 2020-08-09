@@ -250,18 +250,19 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 			index -= len(resp.Contents)
 
+			token := resp.NextContinuationToken
+
 			resp, err = s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
 				Bucket:            aws.String(s.Bucket),
 				Prefix:            aws.String(s.s3Path(q.Prefix)),
-				Delimiter:         aws.String("/"),
-				MaxKeys:           aws.Int64(listMax),
+				MaxKeys:           aws.Int64(int64(limit)),
 				ContinuationToken: resp.NextContinuationToken,
 			})
 			if err != nil {
 				return dsq.Result{Error: err}, false
 			}
 
-			queryLog.Debug("Query (cont): Bucket: ", s.Bucket, ", Prefix: ", s.s3Path(q.Prefix), ", Token: ", resp.NextContinuationToken)
+			queryLog.Debug("Query (cont): Bucket: ", s.Bucket, ", Prefix: ", s.s3Path(q.Prefix), ", Token: ", token)
 		}
 
 		entry := dsq.Entry{
