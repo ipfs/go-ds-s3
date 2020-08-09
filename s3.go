@@ -36,6 +36,7 @@ const (
 var (
 	log      = logging.Logger("ds/s3")
 	cacheLog = logging.Logger("ds/s3/cache")
+	queryLog = logging.Logger("ds/s3/query")
 )
 
 type S3Bucket struct {
@@ -237,10 +238,13 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		return nil, err
 	}
 
+	queryLog.Debug("Query: Bucket: ", s.Bucket, ", Prefix: ", s.s3Path(q.Prefix), ", Limit: ", int64(limit))
+
 	index := q.Offset
 	nextValue := func() (dsq.Result, bool) {
 		for index >= len(resp.Contents) {
 			if !*resp.IsTruncated {
+				queryLog.Debug("Query returns done with ", len(resp.Contents), " in last response")
 				return dsq.Result{}, false
 			}
 
@@ -256,6 +260,8 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 			if err != nil {
 				return dsq.Result{Error: err}, false
 			}
+
+			queryLog.Debug("Query (cont): Bucket: ", s.Bucket, ", Prefix: ", s.s3Path(q.Prefix), ", Token: ", resp.NextContinuationToken)
 		}
 
 		entry := dsq.Entry{
