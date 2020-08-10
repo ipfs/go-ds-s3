@@ -108,7 +108,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 
 		go func() {
 			for {
-				time.Sleep(3 * time.Hour)
+				time.Sleep(5 * time.Minute)
 
 				err := bucket.fetchKeyCache()
 				if err != nil {
@@ -266,7 +266,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		}
 
 		entry := dsq.Entry{
-			Key:  ds.NewKey(s.removeS3Path(*resp.Contents[index].Key, true)).String(),
+			Key:  ds.NewKey(s.removeS3Path(*resp.Contents[index].Key, false)).String(),
 			Size: int(*resp.Contents[index].Size),
 		}
 		if !q.KeysOnly {
