@@ -5,4 +5,4 @@ services:
     environment:
       - SERVICES=s3
     ports:
-      - 4572:4572
+      - 4566:4566

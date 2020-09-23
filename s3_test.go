@@ -16,7 +16,7 @@ func TestSuite(t *testing.T) {
 	_, hasLocalS3 := os.LookupEnv("LOCAL_S3")
 	if hasLocalS3 {
 		config = Config{
-			RegionEndpoint: "http://localhost:4572",
+			RegionEndpoint: "http://localhost:4566",
 			Bucket:         "localBucketName",
 			Region:         "us-east-1",
 			AccessKey:      "localonlyac",
