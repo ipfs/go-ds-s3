@@ -6,7 +6,7 @@ orbs:
 executors:
   go-s3:
     docker:
-      - image: cimg/go:1.14.4
+      - image: cimg/go:1.15.6
       - image: localstack/localstack
     environment:
       LOCAL_S3: 1
@@ -16,7 +16,7 @@ jobs:
   test-plugin:
     executor:
       name: ci-go/default
-      tag: 1.14.4
+      tag: 1.15.6
     steps:
       - checkout
       - ci-go/restore-cache
