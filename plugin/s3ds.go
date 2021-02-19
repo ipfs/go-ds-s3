@@ -90,17 +90,25 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 				return nil, fmt.Errorf("s3ds: workers is not an integer: %f", workersf)
 			}
 		}
+		var credentialsEndpoint string
+		if v, ok := m["credentialsEndpoint"]; ok {
+			credentialsEndpoint, ok = v.(string)
+			if !ok {
+				return nil, fmt.Errorf("s3ds: credentialsEndpoint not a string")
+			}
+		}
 
 		return &S3Config{
 			cfg: s3ds.Config{
-				Region:         region,
-				Bucket:         bucket,
-				AccessKey:      accessKey,
-				SecretKey:      secretKey,
-				SessionToken:   sessionToken,
-				RootDirectory:  rootDirectory,
-				Workers:        workers,
-				RegionEndpoint: endpoint,
+				Region:              region,
+				Bucket:              bucket,
+				AccessKey:           accessKey,
+				SecretKey:           secretKey,
+				SessionToken:        sessionToken,
+				RootDirectory:       rootDirectory,
+				Workers:             workers,
+				RegionEndpoint:      endpoint,
+				CredentialsEndpoint: credentialsEndpoint,
 			},
 		}, nil
 	}
