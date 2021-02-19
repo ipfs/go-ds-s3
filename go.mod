@@ -6,4 +6,6 @@ require (
 	github.com/ipfs/go-ipfs v0.8.0
 )
 
+replace golang.org/x/net => golang.org/x/net v0.0.0-20201021035429-f5854403a974
+
 go 1.13
