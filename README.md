@@ -24,7 +24,7 @@ As go plugins can be finicky to correctly compile and install, you may want to c
 > export GO111MODULE=on
 
 # Clone go-ipfs.
-> git clone github.com/ipfs/go-ipfs
+> git clone https://github.com/ipfs/go-ipfs
 > cd go-ipfs
 
 # Pull in the datastore plugin (you can specify a version other than latest if you'd like).
