@@ -28,6 +28,7 @@ trap "$(printf 'rm -rf "%q"' "$TMP")" EXIT
 (
     cd "$TMP"
     cp "$MODFILE" "go.mod"
+    go mod download bazil.org/fuse
     go list -f '-require={{.Path}}@{{.Version}}{{if .Replace}} -replace={{.Path}}@{{.Version}}={{.Replace}}{{end}}' -m all | tail -n+2  > args
 )
 
