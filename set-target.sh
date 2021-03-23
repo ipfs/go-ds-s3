@@ -15,7 +15,7 @@ if [[ "$VERSION" == /* ]]; then
 else
     $GOCC mod edit -dropreplace=github.com/ipfs/go-ipfs
     # Resolve the exact version/package name
-    MODFILE="$(go list -f '{{.GoMod}}' -m "$PKG@$VERSION")"
+    MODFILE="$(go list -mod=mod -f '{{.GoMod}}' -m "$PKG@$VERSION")"
     resolvedver="$(go list -f '{{.Version}}' -m "$PKG@$VERSION")"
 
     # Update to that version.
@@ -28,8 +28,7 @@ trap "$(printf 'rm -rf "%q"' "$TMP")" EXIT
 (
     cd "$TMP"
     cp "$MODFILE" "go.mod"
-    go mod download bazil.org/fuse
-    go list -f '-require={{.Path}}@{{.Version}}{{if .Replace}} -replace={{.Path}}@{{.Version}}={{.Replace}}{{end}}' -m all | tail -n+2  > args
+    go list -mod=mod -f '-require={{.Path}}@{{.Version}}{{if .Replace}} -replace={{.Path}}@{{.Version}}={{.Replace}}{{end}}' -m all | tail -n+2  > args
 )
 
 $GOCC mod edit $(cat "$TMP/args")
