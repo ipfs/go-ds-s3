@@ -15,7 +15,7 @@ if [[ "$VERSION" == /* ]]; then
 else
     $GOCC mod edit -dropreplace=github.com/ipfs/go-ipfs
     # Resolve the exact version/package name
-    MODFILE="$(go list -mod=mod -f '{{.GoMod}}' -m "$PKG@$VERSION")"
+    MODFILE="$(go list -f '{{.GoMod}}' -m "$PKG@$VERSION")"
     resolvedver="$(go list -f '{{.Version}}' -m "$PKG@$VERSION")"
 
     # Update to that version.
