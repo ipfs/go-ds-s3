@@ -28,7 +28,7 @@ trap "$(printf 'rm -rf "%q"' "$TMP")" EXIT
 (
     cd "$TMP"
     cp "$MODFILE" "go.mod"
-    go list -f '-require={{.Path}}@{{.Version}}{{if .Replace}} -replace={{.Path}}@{{.Version}}={{.Replace}}{{end}}' -m all | tail -n+2  > args
+    go list -mod=mod -f '-require={{.Path}}@{{.Version}}{{if .Replace}} -replace={{.Path}}@{{.Version}}={{.Replace}}{{end}}' -m all | tail -n+2  > args
 )
 
 $GOCC mod edit $(cat "$TMP/args")

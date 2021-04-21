@@ -6,4 +6,4 @@ require (
 	github.com/ipfs/go-ipfs v0.8.0
 )
 
-go 1.13
+go 1.15
