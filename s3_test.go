@@ -17,7 +17,7 @@ func TestSuite(t *testing.T) {
 	if hasLocalS3 {
 		config = Config{
 			RegionEndpoint: "http://localhost:4566",
-			Bucket:         "localBucketName",
+			Bucket:         "localbucketname",
 			Region:         "us-east-1",
 			AccessKey:      "localonlyac",
 			SecretKey:      "localonlysk",
@@ -30,7 +30,7 @@ func TestSuite(t *testing.T) {
 	}
 
 	if hasLocalS3 {
-		err = devMakeBucket(s3ds.S3, "localBucketName")
+		err = devMakeBucket(s3ds.S3, "localbucketname")
 		if err != nil {
 			t.Fatal(err)
 		}
