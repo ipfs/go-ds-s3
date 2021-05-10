@@ -12,32 +12,6 @@ executors:
       LOCAL_S3: 1
       SERVICES: s3
 
-jobs:
-  test-plugin:
-    executor:
-      name: ci-go/default
-      tag: 1.15.8
-    steps:
-      - checkout
-      - ci-go/restore-cache
-      - run:
-          name: "Downloading IPFS"
-          command: |
-            IPFS_VERSION="$(go list -f '{{.Module.Version}}' github.com/ipfs/go-ipfs)"
-            GOOS=$(go env GOOS)
-            GOARCH=$(go env GOARCH)
-            mkdir ~/bin
-            curl "${IPFS_DISTS}/go-ipfs/${IPFS_VERSION}/go-ipfs_${IPFS_VERSION}_$(go env GOOS)-$(go env GOARCH).tar.gz" | tar -O -zx go-ipfs/ipfs > ~/bin/ipfs
-            chmod +x ~/bin/ipfs
-      - run:
-          name: ipfs init
-          command: ~/bin/ipfs init
-      - run: make install
-      - run:
-          name: ipfs version
-          command: ~/bin/ipfs version
-      - ci-go/save-cache
-
 workflows:
   version: 2
   test:
@@ -46,4 +20,3 @@ workflows:
     - ci-go/lint
     - ci-go/test:
         executor: go-s3
-    - test-plugin
