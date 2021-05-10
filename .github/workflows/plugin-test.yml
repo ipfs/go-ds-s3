@@ -1,0 +1,33 @@
+on: [push, pull_request]
+
+name: Test Plugin
+
+jobs:
+  load:
+    name: Plugin Loads
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: "Downloading IPFS"
+        id: "download"
+        run: |
+          IPFS_VERSION="$(go list -f '{{.Module.Version}}' github.com/ipfs/go-ipfs)"
+          GOOS=$(go env GOOS)
+          GOARCH=$(go env GOARCH)
+          mkdir ~/bin
+          curl "https://dist.ipfs.io/go-ipfs/${IPFS_VERSION}/go-ipfs_${IPFS_VERSION}_$(go env GOOS)-$(go env GOARCH).tar.gz" | tar -O -zx go-ipfs/ipfs > ~/bin/ipfs
+          chmod +x ~/bin/ipfs
+          echo "::set-output name=target-go-version::$(~/bin/ipfs version --all | sed -n 's/Golang version: go//p')"
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "${{steps.download.outputs.target-go-version}}"
+      - name: Go information
+        run: |
+          go version
+          go env
+      - name: Initialize IPFS Repo
+        run: ~/bin/ipfs init
+      - name: Install Plugins
+        run: make install
+      - name: ipfs version
+        run: ~/bin/ipfs version
