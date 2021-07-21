@@ -10,18 +10,19 @@ import (
 )
 
 func TestSuiteLocalS3(t *testing.T) {
-	// Only run tests when LOCAL_S3 is set, since the tests are not set up for AWS S3 calls.
+	// Only run tests when LOCAL_S3 is set, since the tests are only set up for a local S3 endpoint.
+	// To run tests locally, run `docker-compose up` in this repo in order to get a local S3 running
+	// on port 9000. Then run `LOCAL_S3=true go test -v ./...` to execute tests.
 	if _, localS3 := os.LookupEnv("LOCAL_S3"); !localS3 {
 		t.Skipf("skipping test suit; LOCAL_S3 is not set.")
 	}
-	// run docker-compose up in this repo in order to get a local
-	// s3 running on port 4572
+
 	config := Config{
-		RegionEndpoint: "http://localhost:4566",
+		RegionEndpoint: "http://localhost:9000",
 		Bucket:         "localbucketname",
-		Region:         "us-east-1",
-		AccessKey:      "localonlyac",
-		SecretKey:      "localonlysk",
+		Region:         "local",
+		AccessKey:      "test",
+		SecretKey:      "testdslocal",
 	}
 
 	s3ds, err := NewS3Datastore(config)
