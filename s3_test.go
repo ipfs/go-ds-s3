@@ -9,19 +9,20 @@ import (
 	dstest "github.com/ipfs/go-datastore/test"
 )
 
-func TestSuite(t *testing.T) {
-	// run docker-compose up in this repo in order to get a local
-	// s3 running on port 4572
-	config := Config{}
-	_, hasLocalS3 := os.LookupEnv("LOCAL_S3")
-	if hasLocalS3 {
-		config = Config{
-			RegionEndpoint: "http://localhost:4566",
-			Bucket:         "localbucketname",
-			Region:         "us-east-1",
-			AccessKey:      "localonlyac",
-			SecretKey:      "localonlysk",
-		}
+func TestSuiteLocalS3(t *testing.T) {
+	// Only run tests when LOCAL_S3 is set, since the tests are only set up for a local S3 endpoint.
+	// To run tests locally, run `docker-compose up` in this repo in order to get a local S3 running
+	// on port 9000. Then run `LOCAL_S3=true go test -v ./...` to execute tests.
+	if _, localS3 := os.LookupEnv("LOCAL_S3"); !localS3 {
+		t.Skipf("skipping test suit; LOCAL_S3 is not set.")
+	}
+
+	config := Config{
+		RegionEndpoint: "http://localhost:9000",
+		Bucket:         "localbucketname",
+		Region:         "local",
+		AccessKey:      "test",
+		SecretKey:      "testdslocal",
 	}
 
 	s3ds, err := NewS3Datastore(config)
@@ -29,11 +30,8 @@ func TestSuite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if hasLocalS3 {
-		err = devMakeBucket(s3ds.S3, "localbucketname")
-		if err != nil {
-			t.Fatal(err)
-		}
+	if err = devMakeBucket(s3ds.S3, "localbucketname"); err != nil {
+		t.Fatal(err)
 	}
 
 	t.Run("basic operations", func(t *testing.T) {
