@@ -34,18 +34,7 @@ func TestSuiteLocalS3(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Run("basic operations", func(t *testing.T) {
-		dstest.SubtestBasicPutGet(t, s3ds)
-	})
-	t.Run("not found operations", func(t *testing.T) {
-		dstest.SubtestNotFounds(t, s3ds)
-	})
-	t.Run("many puts and gets, query", func(t *testing.T) {
-		dstest.SubtestManyKeysAndQuery(t, s3ds)
-	})
-	t.Run("return sizes", func(t *testing.T) {
-		dstest.SubtestReturnSizes(t, s3ds)
-	})
+	dstest.SubtestAll(t, s3ds)
 }
 
 func devMakeBucket(s3obj *s3.S3, bucketName string) error {

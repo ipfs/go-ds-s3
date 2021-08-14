@@ -168,23 +168,64 @@ func (s *S3Bucket) Delete(k ds.Key) error {
 	return err
 }
 
+func querySupported(q dsq.Query) bool {
+	if len(q.Orders) > 0 {
+		switch q.Orders[0].(type) {
+		case dsq.OrderByKey, *dsq.OrderByKey:
+			// We order by key by default.
+		default:
+			return false
+		}
+	}
+	return len(q.Filters) == 0
+}
+
 func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
-	if q.Orders != nil || q.Filters != nil {
-		return nil, fmt.Errorf("s3ds: filters or orders are not supported")
+	// Handle ordering
+	if !querySupported(q) {
+		// OK, time to do this the naive way.
+
+		// Skip the stuff we can't apply.
+		baseQuery := q
+		baseQuery.Filters = nil
+		baseQuery.Orders = nil
+		baseQuery.Limit = 0  // needs to apply after we order
+		baseQuery.Offset = 0 // ditto.
+
+		// perform the base query.
+		res, err := s.Query(baseQuery)
+		if err != nil {
+			return nil, err
+		}
+
+		// fix the query
+		res = dsq.ResultsReplaceQuery(res, q)
+
+		// Remove the prefix, S3 has already handled it.
+		naiveQuery := q
+		naiveQuery.Prefix = ""
+
+		// Apply the rest of the query
+		return dsq.NaiveQueryApply(naiveQuery, res), nil
 	}
 
-	// S3 store a "/foo" key as "foo" so we need to trim the leading "/"
-	q.Prefix = strings.TrimPrefix(q.Prefix, "/")
+	// Normalize the path and strip the leading / as S3 stores values
+	// without the leading /.
+	prefix := ds.NewKey(q.Prefix).String()[1:]
 
-	limit := q.Limit + q.Offset
-	if limit == 0 || limit > listMax {
-		limit = listMax
+	sent := 0
+	queryLimit := func() int64 {
+		if q.Limit > 0 && (q.Limit-sent) < listMax {
+			return int64(q.Limit - sent)
+		}
+		return listMax
 	}
 
 	resp, err := s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket:  aws.String(s.Bucket),
-		Prefix:  aws.String(s.s3Path(q.Prefix)),
-		MaxKeys: aws.Int64(int64(limit)),
+		Bucket:    aws.String(s.Bucket),
+		Prefix:    aws.String(s.s3Path(prefix)),
+		Delimiter: aws.String("/"),
+		MaxKeys:   aws.Int64(queryLimit()),
 	})
 	if err != nil {
 		return nil, err
@@ -192,6 +233,11 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 	index := q.Offset
 	nextValue := func() (dsq.Result, bool) {
+	tryAgain:
+		if q.Limit > 0 && sent >= q.Limit {
+			return dsq.Result{}, false
+		}
+
 		for index >= len(resp.Contents) {
 			if !*resp.IsTruncated {
 				return dsq.Result{}, false
@@ -201,9 +247,9 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 			resp, err = s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
 				Bucket:            aws.String(s.Bucket),
-				Prefix:            aws.String(s.s3Path(q.Prefix)),
+				Prefix:            aws.String(s.s3Path(prefix)),
 				Delimiter:         aws.String("/"),
-				MaxKeys:           aws.Int64(listMax),
+				MaxKeys:           aws.Int64(queryLimit()),
 				ContinuationToken: resp.NextContinuationToken,
 			})
 			if err != nil {
@@ -217,13 +263,24 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		}
 		if !q.KeysOnly {
 			value, err := s.Get(ds.NewKey(entry.Key))
-			if err != nil {
-				return dsq.Result{Error: err}, false
+			switch err {
+			case nil:
+			case ds.ErrNotFound:
+				// This just means the value got deleted in the
+				// mean-time. That's not an error.
+				//
+				// We could use a loop instead of a goto, but
+				// this is one of those rare cases where a goto
+				// is easier to understand.
+				goto tryAgain
+			default:
+				return dsq.Result{Entry: entry, Error: err}, false
 			}
 			entry.Value = value
 		}
 
 		index++
+		sent++
 		return dsq.Result{Entry: entry}, true
 	}
 
