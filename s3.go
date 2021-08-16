@@ -105,7 +105,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 func (s *S3Bucket) Put(k ds.Key, value []byte) error {
 	_, err := s.S3.PutObject(&s3.PutObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
+		Key:    aws.String(s.s3Path(k.String() + "/data")),
 		Body:   bytes.NewReader(value),
 	})
 	return err
@@ -118,7 +118,7 @@ func (s *S3Bucket) Sync(prefix ds.Key) error {
 func (s *S3Bucket) Get(k ds.Key) ([]byte, error) {
 	resp, err := s.S3.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
+		Key:    aws.String(s.s3Path(k.String() + "/data")),
 	})
 	if err != nil {
 		if isNotFound(err) {
@@ -145,7 +145,7 @@ func (s *S3Bucket) Has(k ds.Key) (exists bool, err error) {
 func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 	resp, err := s.S3.HeadObject(&s3.HeadObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
+		Key:    aws.String(s.s3Path(k.String() + "/data")),
 	})
 	if err != nil {
 		if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == "NotFound" {
@@ -159,7 +159,7 @@ func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 func (s *S3Bucket) Delete(k ds.Key) error {
 	_, err := s.S3.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
+		Key:    aws.String(s.s3Path(k.String() + "/data")),
 	})
 	if isNotFound(err) {
 		// delete is idempotent
@@ -268,7 +268,7 @@ type batchOp struct {
 }
 
 func (b *s3Batch) Put(k ds.Key, val []byte) error {
-	b.ops[k.String()] = batchOp{
+	b.ops[k.String() + "/data"] = batchOp{
 		val:    val,
 		delete: false,
 	}
@@ -276,7 +276,7 @@ func (b *s3Batch) Put(k ds.Key, val []byte) error {
 }
 
 func (b *s3Batch) Delete(k ds.Key) error {
-	b.ops[k.String()] = batchOp{
+	b.ops[k.String() + "/data"] = batchOp{
 		val:    nil,
 		delete: true,
 	}
@@ -319,7 +319,7 @@ func (b *s3Batch) Commit() error {
 	}
 
 	for _, k := range putKeys {
-		jobs <- b.newPutJob(k, b.ops[k.String()].val)
+		jobs <- b.newPutJob(k, b.ops[k.String() + "/data"].val)
 	}
 
 	if len(deleteObjs) > 0 {
