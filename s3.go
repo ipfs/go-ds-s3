@@ -268,7 +268,7 @@ type batchOp struct {
 }
 
 func (b *s3Batch) Put(k ds.Key, val []byte) error {
-	b.ops[k.String() + "/data"] = batchOp{
+	b.ops[k.String()] = batchOp{
 		val:    val,
 		delete: false,
 	}
@@ -276,7 +276,7 @@ func (b *s3Batch) Put(k ds.Key, val []byte) error {
 }
 
 func (b *s3Batch) Delete(k ds.Key) error {
-	b.ops[k.String() + "/data"] = batchOp{
+	b.ops[k.String()] = batchOp{
 		val:    nil,
 		delete: true,
 	}
@@ -319,7 +319,7 @@ func (b *s3Batch) Commit() error {
 	}
 
 	for _, k := range putKeys {
-		jobs <- b.newPutJob(k, b.ops[k.String() + "/data"].val)
+		jobs <- b.newPutJob(k, b.ops[k.String()].val)
 	}
 
 	if len(deleteObjs) > 0 {
