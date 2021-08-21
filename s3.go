@@ -53,25 +53,12 @@ type Config struct {
 	RootDirectory       string
 	Workers             int
 	CredentialsEndpoint string
-	KeyTransform        func(ds.Key) string
-}
-
-func DefaultKeyTransform(k ds.Key) string {
-	return k.String()
-}
-
-// BucketSplitKeyTransform can be used to ensure each cid ends up in its own bucket
-func BucketSplitKeyTransform(k ds.Key) string {
-	return k.String() + "/data"
+	KeySuffix           string
 }
 
 func NewS3Datastore(conf Config) (*S3Bucket, error) {
 	if conf.Workers == 0 {
 		conf.Workers = defaultWorkers
-	}
-
-	if conf.KeyTransform == nil {
-		conf.KeyTransform = DefaultKeyTransform
 	}
 
 	awsConfig := aws.NewConfig()
@@ -119,7 +106,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 func (s *S3Bucket) Put(k ds.Key, value []byte) error {
 	_, err := s.S3.PutObject(&s3.PutObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(s.Config.KeyTransform(k))),
+		Key:    aws.String(s.s3Path(k.String() + s.Config.KeySuffix)),
 		Body:   bytes.NewReader(value),
 	})
 	return err
@@ -132,7 +119,7 @@ func (s *S3Bucket) Sync(prefix ds.Key) error {
 func (s *S3Bucket) Get(k ds.Key) ([]byte, error) {
 	resp, err := s.S3.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(s.Config.KeyTransform(k))),
+		Key:    aws.String(s.s3Path(k.String() + s.Config.KeySuffix)),
 	})
 	if err != nil {
 		if isNotFound(err) {
@@ -159,7 +146,7 @@ func (s *S3Bucket) Has(k ds.Key) (exists bool, err error) {
 func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 	resp, err := s.S3.HeadObject(&s3.HeadObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(s.Config.KeyTransform(k))),
+		Key:    aws.String(s.s3Path(k.String() + s.Config.KeySuffix)),
 	})
 	if err != nil {
 		if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == "NotFound" {
@@ -173,7 +160,7 @@ func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 func (s *S3Bucket) Delete(k ds.Key) error {
 	_, err := s.S3.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(s.KeyTransform(k))),
+		Key:    aws.String(s.s3Path(k.String() + s.Config.KeySuffix)),
 	})
 	if isNotFound(err) {
 		// delete is idempotent
