@@ -117,7 +117,7 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 				Workers:             workers,
 				RegionEndpoint:      endpoint,
 				CredentialsEndpoint: credentialsEndpoint,
-				KeySuffix: keySuffix
+				KeySuffix: keySuffix,
 			},
 		}, nil
 	}
