@@ -97,6 +97,14 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 				return nil, fmt.Errorf("s3ds: credentialsEndpoint not a string")
 			}
 		}
+		
+		var keySuffix string
+		if v, ok := m["keySuffix"]; ok {
+			keySuffix, ok = v.(string)
+			if !ok {
+				return nil, fmt.Errorf("s3ds: keySuffix not a string")
+			}
+		}
 
 		return &S3Config{
 			cfg: s3ds.Config{
@@ -109,6 +117,7 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 				Workers:             workers,
 				RegionEndpoint:      endpoint,
 				CredentialsEndpoint: credentialsEndpoint,
+				KeySuffix: keySuffix
 			},
 		}, nil
 	}
