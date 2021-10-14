@@ -3,7 +3,7 @@ package plugin
 import (
 	"fmt"
 
-	s3ds "github.com/ipfs/go-ds-s3"
+	s3ds "github.com/3box/go-ds-s3"
 	"github.com/ipfs/go-ipfs/plugin"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -97,7 +97,7 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 				return nil, fmt.Errorf("s3ds: credentialsEndpoint not a string")
 			}
 		}
-		
+
 		var keySuffix string
 		if v, ok := m["keySuffix"]; ok {
 			keySuffix, ok = v.(string)
@@ -117,7 +117,7 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 				Workers:             workers,
 				RegionEndpoint:      endpoint,
 				CredentialsEndpoint: credentialsEndpoint,
-				KeySuffix: keySuffix,
+				KeySuffix:           keySuffix,
 			},
 		}, nil
 	}
