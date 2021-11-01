@@ -98,11 +98,15 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 			}
 		}
 
-		var keySuffix string
-		if v, ok := m["keySuffix"]; ok {
-			keySuffix, ok = v.(string)
-			if !ok {
-				return nil, fmt.Errorf("s3ds: keySuffix not a string")
+		var keyTransform s3ds.KeyTransform
+		if v, ok := m["keyTransform"]; ok {
+			if v == "" {
+				keyTransform = "default"
+			} else {
+				keyTransform, ok = v.(s3ds.KeyTransform)
+				if !ok {
+					return nil, fmt.Errorf("s3ds: keyTransform is not a valid key transform method")
+				}
 			}
 		}
 
@@ -117,7 +121,7 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 				Workers:             workers,
 				RegionEndpoint:      endpoint,
 				CredentialsEndpoint: credentialsEndpoint,
-				KeySuffix:           keySuffix,
+				KeyTransform:        keyTransform,
 			},
 		}, nil
 	}
