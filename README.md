@@ -72,7 +72,8 @@ The config file should include the following:
             "bucket": "$bucketname",
             "rootDirectory": "$bucketsubdirectory",
             "accessKey": "",
-            "secretKey": ""
+            "secretKey": "",
+            "keyTransform": "$keytransformmethod"
           },
           "mountpoint": "/blocks",
           "prefix": "s3.datastore",
@@ -81,6 +82,7 @@ The config file should include the following:
 ```
 
 If the access and secret key are blank they will be loaded from the usual ~/.aws/.
+The key transform allows you to specify how data is stored behind S3 keys. It must be one of the available methods: `default`, `suffix`, or `next-to-last/2`.
 If you are on another S3 compatible provider, e.g. Linode, then your config should be:
 
 ```json
@@ -98,7 +100,8 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
             "rootDirectory": "$bucketsubdirectory",
             "regionEndpoint": "us-east-1.linodeobjects.com",
             "accessKey": "",
-            "secretKey": ""
+            "secretKey": "",
+            "keyTransform": "$keytransformmethod"
           },
           "mountpoint": "/blocks",
           "prefix": "s3.datastore",
