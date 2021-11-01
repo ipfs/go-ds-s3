@@ -47,6 +47,7 @@ func TestS3PluginDatastoreConfigParser(t *testing.T) {
 				"regionEndpoint":      "someendpoint",
 				"workers":             42.0,
 				"credentialsEndpoint": "somecredendpoint",
+				"keyTransform":        "next-to-last/2",
 			},
 			Want: &S3Config{cfg: s3ds.Config{
 				Region:              "someregion",
@@ -58,6 +59,7 @@ func TestS3PluginDatastoreConfigParser(t *testing.T) {
 				RegionEndpoint:      "someendpoint",
 				Workers:             42,
 				CredentialsEndpoint: "somecredendpoint",
+				KeyTransform:        "next-to-last/2",
 			}},
 		},
 	}
