@@ -23,6 +23,7 @@ func TestSuiteLocalS3(t *testing.T) {
 		Region:         "local",
 		AccessKey:      "test",
 		SecretKey:      "testdslocal",
+		KeyTransform:   "next-to-last/2",
 	}
 
 	s3ds, err := NewS3Datastore(config)
