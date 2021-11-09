@@ -53,7 +53,7 @@ type Config struct {
 	RootDirectory       string
 	Workers             int
 	CredentialsEndpoint string
-	KeyTransform        KeyTransform
+	KeyTransform        string
 }
 
 type KeyTransform string
@@ -64,14 +64,14 @@ const (
 	NextToLast2              = "next-to-last/2"
 )
 
-var KeyTransforms = map[KeyTransform]func(ds.Key) string{
-	Default: func(k ds.Key) string {
+var KeyTransforms = map[string]func(ds.Key) string{
+	"default": func(k ds.Key) string {
 		return k.String()
 	},
-	Suffix: func(k ds.Key) string {
+	"suffix": func(k ds.Key) string {
 		return k.String() + "/data"
 	},
-	NextToLast2: func(k ds.Key) string {
+	"nextToLast2": func(k ds.Key) string {
 		s := k.String()
 		offset := 1
 		start := len(s) - 2 - offset

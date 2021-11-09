@@ -98,12 +98,12 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 			}
 		}
 
-		var keyTransform s3ds.KeyTransform
+		var keyTransform string
 		if v, ok := m["keyTransform"]; ok {
 			if v == "" {
 				keyTransform = "default"
 			} else {
-				keyTransform, ok = v.(s3ds.KeyTransform)
+				keyTransform, ok = v.(string)
 				if !ok {
 					return nil, fmt.Errorf("s3ds: keyTransform is not a valid key transform method")
 				}
