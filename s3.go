@@ -56,14 +56,6 @@ type Config struct {
 	KeyTransform        string
 }
 
-type KeyTransform string
-
-const (
-	Default     KeyTransform = "default"
-	Suffix                   = "suffix"
-	NextToLast2              = "next-to-last/2"
-)
-
 var KeyTransforms = map[string]func(ds.Key) string{
 	"default": func(k ds.Key) string {
 		return k.String()
