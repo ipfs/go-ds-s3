@@ -63,7 +63,7 @@ var KeyTransforms = map[string]func(ds.Key) string{
 	"suffix": func(k ds.Key) string {
 		return k.String() + "/data"
 	},
-	"nextToLast2": func(k ds.Key) string {
+	"next-to-last/2": func(k ds.Key) string {
 		s := k.String()
 		offset := 1
 		start := len(s) - 2 - offset
