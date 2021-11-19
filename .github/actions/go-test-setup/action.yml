@@ -1,0 +1,12 @@
+name: local-s3
+description: prepare setup for tests using local S3
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set LOCAL_S3 env var
+      shell: bash
+      run: echo "LOCAL_S3=true" >> $GITHUB_ENV
+    - name: Start local S3
+      shell: bash
+      run: docker-compose up -d
