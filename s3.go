@@ -2,6 +2,7 @@ package s3ds
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -37,6 +38,8 @@ const (
 	// earliest time the endpoint creds can be refreshed.
 	credsRefreshWindow = 2 * time.Minute
 )
+
+var _ ds.Datastore = (*S3Bucket)(nil)
 
 type S3Bucket struct {
 	Config
@@ -118,8 +121,8 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 	}, nil
 }
 
-func (s *S3Bucket) Put(k ds.Key, value []byte) error {
-	_, err := s.S3.PutObject(&s3.PutObjectInput{
+func (s *S3Bucket) Put(ctx context.Context, k ds.Key, value []byte) error {
+	_, err := s.S3.PutObjectWithContext(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(s.s3Path(prepareKey(s.Config, k))),
 		Body:   bytes.NewReader(value),
@@ -127,12 +130,12 @@ func (s *S3Bucket) Put(k ds.Key, value []byte) error {
 	return err
 }
 
-func (s *S3Bucket) Sync(prefix ds.Key) error {
+func (s *S3Bucket) Sync(ctx context.Context, prefix ds.Key) error {
 	return nil
 }
 
-func (s *S3Bucket) Get(k ds.Key) ([]byte, error) {
-	resp, err := s.S3.GetObject(&s3.GetObjectInput{
+func (s *S3Bucket) Get(ctx context.Context, k ds.Key) ([]byte, error) {
+	resp, err := s.S3.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(s.s3Path(prepareKey(s.Config, k))),
 	})
@@ -147,8 +150,8 @@ func (s *S3Bucket) Get(k ds.Key) ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (s *S3Bucket) Has(k ds.Key) (exists bool, err error) {
-	_, err = s.GetSize(k)
+func (s *S3Bucket) Has(ctx context.Context, k ds.Key) (exists bool, err error) {
+	_, err = s.GetSize(ctx, k)
 	if err != nil {
 		if err == ds.ErrNotFound {
 			return false, nil
@@ -158,8 +161,8 @@ func (s *S3Bucket) Has(k ds.Key) (exists bool, err error) {
 	return true, nil
 }
 
-func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
-	resp, err := s.S3.HeadObject(&s3.HeadObjectInput{
+func (s *S3Bucket) GetSize(ctx context.Context, k ds.Key) (size int, err error) {
+	resp, err := s.S3.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(s.s3Path(prepareKey(s.Config, k))),
 	})
@@ -172,8 +175,8 @@ func (s *S3Bucket) GetSize(k ds.Key) (size int, err error) {
 	return int(*resp.ContentLength), nil
 }
 
-func (s *S3Bucket) Delete(k ds.Key) error {
-	_, err := s.S3.DeleteObject(&s3.DeleteObjectInput{
+func (s *S3Bucket) Delete(ctx context.Context, k ds.Key) error {
+	_, err := s.S3.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(s.s3Path(prepareKey(s.Config, k))),
 	})
@@ -188,7 +191,7 @@ func prepareKey(cfg Config, k ds.Key) string {
 	return KeyTransforms[cfg.KeyTransform](k)
 }
 
-func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
+func (s *S3Bucket) Query(ctx context.Context, q dsq.Query) (dsq.Results, error) {
 	if q.Orders != nil || q.Filters != nil {
 		return nil, fmt.Errorf("s3ds: filters or orders are not supported")
 	}
@@ -201,7 +204,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 		limit = listMax
 	}
 
-	resp, err := s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+	resp, err := s.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
 		Bucket:  aws.String(s.Bucket),
 		Prefix:  aws.String(s.s3Path(q.Prefix)),
 		MaxKeys: aws.Int64(int64(limit)),
@@ -219,7 +222,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 
 			index -= len(resp.Contents)
 
-			resp, err = s.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+			resp, err = s.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
 				Bucket:            aws.String(s.Bucket),
 				Prefix:            aws.String(s.s3Path(q.Prefix)),
 				Delimiter:         aws.String("/"),
@@ -236,7 +239,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 			Size: int(*resp.Contents[index].Size),
 		}
 		if !q.KeysOnly {
-			value, err := s.Get(ds.NewKey(entry.Key))
+			value, err := s.Get(ctx, ds.NewKey(entry.Key))
 			if err != nil {
 				return dsq.Result{Error: err}, false
 			}
@@ -255,7 +258,7 @@ func (s *S3Bucket) Query(q dsq.Query) (dsq.Results, error) {
 	}), nil
 }
 
-func (s *S3Bucket) Batch() (ds.Batch, error) {
+func (s *S3Bucket) Batch(_ context.Context) (ds.Batch, error) {
 	return &s3Batch{
 		s:          s,
 		ops:        make(map[string]batchOp),
@@ -287,7 +290,7 @@ type batchOp struct {
 	delete bool
 }
 
-func (b *s3Batch) Put(k ds.Key, val []byte) error {
+func (b *s3Batch) Put(ctx context.Context, k ds.Key, val []byte) error {
 	b.ops[k.String()] = batchOp{
 		val:    val,
 		delete: false,
@@ -295,7 +298,7 @@ func (b *s3Batch) Put(k ds.Key, val []byte) error {
 	return nil
 }
 
-func (b *s3Batch) Delete(k ds.Key) error {
+func (b *s3Batch) Delete(ctx context.Context, k ds.Key) error {
 	b.ops[k.String()] = batchOp{
 		val:    nil,
 		delete: true,
@@ -303,7 +306,7 @@ func (b *s3Batch) Delete(k ds.Key) error {
 	return nil
 }
 
-func (b *s3Batch) Commit() error {
+func (b *s3Batch) Commit(ctx context.Context) error {
 	var (
 		deleteObjs []*s3.ObjectIdentifier
 		putKeys    []ds.Key
@@ -339,7 +342,7 @@ func (b *s3Batch) Commit() error {
 	}
 
 	for _, k := range putKeys {
-		jobs <- b.newPutJob(k, b.ops[k.String()].val)
+		jobs <- b.newPutJob(ctx, k, b.ops[k.String()].val)
 	}
 
 	if len(deleteObjs) > 0 {
@@ -349,7 +352,7 @@ func (b *s3Batch) Commit() error {
 				limit = len(deleteObjs[i:])
 			}
 
-			jobs <- b.newDeleteJob(deleteObjs[i : i+limit])
+			jobs <- b.newDeleteJob(ctx, deleteObjs[i:i+limit])
 		}
 	}
 	close(jobs)
@@ -368,13 +371,13 @@ func (b *s3Batch) Commit() error {
 	return nil
 }
 
-func (b *s3Batch) newPutJob(k ds.Key, value []byte) func() error {
+func (b *s3Batch) newPutJob(ctx context.Context, k ds.Key, value []byte) func() error {
 	return func() error {
-		return b.s.Put(k, value)
+		return b.s.Put(ctx, k, value)
 	}
 }
 
-func (b *s3Batch) newDeleteJob(objs []*s3.ObjectIdentifier) func() error {
+func (b *s3Batch) newDeleteJob(ctx context.Context, objs []*s3.ObjectIdentifier) func() error {
 	return func() error {
 		resp, err := b.s.S3.DeleteObjects(&s3.DeleteObjectsInput{
 			Bucket: aws.String(b.s.Bucket),

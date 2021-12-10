@@ -123,6 +123,12 @@ Feel free to join in. All welcome. Open an [issue](https://github.com/ipfs/go-ip
 
 This repository falls under the IPFS [Code of Conduct](https://github.com/ipfs/community/blob/master/code-of-conduct.md).
 
+### Local Development
+
+```
+go mod vendor
+```
+
 ### Want to hack on IPFS?
 
 [![](https://cdn.rawgit.com/jbenet/contribute-ipfs-gif/master/img/contribute.gif)](https://github.com/ipfs/community/blob/master/CONTRIBUTING.md)
