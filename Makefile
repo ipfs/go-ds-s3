@@ -28,7 +28,7 @@ go.mod: FORCE
 FORCE:
 
 s3plugin.so: plugin/main/main.go go.mod
-	$(GOCC) build $(GOFLAGS) -buildmode=plugin -o "$@" "$<"
+	CGO_ENABLED=1 $(GOCC) build $(GOFLAGS) -buildmode=plugin -o "$@" "$<"
 	chmod +x "$@"
 
 build: s3plugin.so
