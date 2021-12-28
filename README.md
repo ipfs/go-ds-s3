@@ -52,8 +52,8 @@ For a brand new ipfs instance (no data stored yet):
 
 1. Copy `s3plugin.so` to `$IPFS_DIR/plugins/go-ds-s3.so` (or run `make install` if you are installing locally).
 2. Run `ipfs init`.
-3. Edit `$IPFS_DIR/config` to include s3 details for the **first** Datastore mount (see [#configuration](Configuration) below).
-4. Overwrite `$IPFS_DIR/datastore_spec` (*Don't do this on an instance with existing data - it will be lost*. See [#configuration](Configuration) below).
+3. Edit `$IPFS_DIR/config` to include s3 details for the **first** Datastore mount (see [Configuration](#configuration) below).
+4. Overwrite `$IPFS_DIR/datastore_spec` (*Don't do this on an instance with existing data - it will be lost*. See [Configuration](#configuration) below).
 
 ### Configuration
 
