@@ -50,10 +50,10 @@ As go plugins can be finicky to correctly compile and install, you may want to c
 
 For a brand new ipfs instance (no data stored yet):
 
-1. Copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so (or run `make install` if you are installing locally).
+1. Copy `s3plugin.so` to `$IPFS_DIR/plugins/go-ds-s3.so` (or run `make install` if you are installing locally).
 2. Run `ipfs init`.
-3. Edit $IPFS_DIR/config to include s3 details (see Configuration below).
-4. Overwrite `$IPFS_DIR/datastore_spec` as specified below (*Don't do this on an instance with existing data - it will be lost*).
+3. Edit `$IPFS_DIR/config` to include s3 details for the **first** Datastore mount (see [#configuration](Configuration) below).
+4. Overwrite `$IPFS_DIR/datastore_spec` (*Don't do this on an instance with existing data - it will be lost*. See [#configuration](Configuration) below).
 
 ### Configuration
 
@@ -68,7 +68,7 @@ The config file should include the following:
         {
           "child": {
             "type": "s3ds",
-            "region": "us-east-1",
+            "region": "$bucketregion",
             "bucket": "$bucketname",
             "rootDirectory": "$bucketsubdirectory",
             "accessKey": "",
@@ -95,7 +95,7 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
         {
           "child": {
             "type": "s3ds",
-            "region": "us-east-1",
+            "region": "$bucketregion",
             "bucket": "$bucketname",
             "rootDirectory": "$bucketsubdirectory",
             "regionEndpoint": "us-east-1.linodeobjects.com",
@@ -112,7 +112,7 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
 If you are configuring a brand new ipfs instance without any data, you can overwrite the datastore_spec file with:
 
 ```
-{"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"us-east-1","rootDirectory":"$bucketsubdirectory"},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
+{"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"$bucketregion","rootDirectory":"$bucketsubdirectory"},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
 ```
 
 Otherwise, you need to do a datastore migration.
