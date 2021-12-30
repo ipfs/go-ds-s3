@@ -82,7 +82,18 @@ The config file should include the following:
 ```
 
 If the access and secret key are blank they will be loaded from the usual ~/.aws/.
-The key transform allows you to specify how data is stored behind S3 keys. It must be one of the available methods: `default`, `suffix`, or `next-to-last/2`.
+
+The key transform allows you to specify how data is stored behind S3 keys. It must be one of the available methods:
+
+`default`
+- No sharding.
+
+`suffix`
+- Shards by storing block data at a key with a `data` suffix. E.g. `CIQJ7IHPGOFUJT5UMXIW6CUDSNH6AVKMEOXI3UM3VLYJRZUISUMGCXQ/data`
+
+`next-to-last/2`
+- Shards by storing block data based on the second to last 2 characters of its key. E.g. `CX/CIQJ7IHPGOFUJT5UMXIW6CUDSNH6AVKMEOXI3UM3VLYJRZUISUMGCXQ`
+
 If you are on another S3 compatible provider, e.g. Linode, then your config should be:
 
 ```json
