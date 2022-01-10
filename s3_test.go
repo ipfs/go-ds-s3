@@ -1,8 +1,10 @@
 package s3ds
 
 import (
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -17,9 +19,14 @@ func TestSuiteLocalS3(t *testing.T) {
 		t.Skipf("skipping test suit; LOCAL_S3 is not set.")
 	}
 
+  localBucketName, localBucketNameSet := os.LookupEnv("LOCAL_BUCKET_NAME")
+  if !localBucketNameSet {
+    localBucketName = fmt.Sprintf("localbucketname%d", time.Now().UnixNano())
+	}
+
 	config := Config{
 		RegionEndpoint: "http://localhost:9000",
-		Bucket:         "localbucketname",
+		Bucket:         localBucketName,
 		Region:         "local",
 		AccessKey:      "test",
 		SecretKey:      "testdslocal",
@@ -31,7 +38,7 @@ func TestSuiteLocalS3(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = devMakeBucket(s3ds.S3, "localbucketname"); err != nil {
+	if err = devMakeBucket(s3ds.S3, localBucketName); err != nil {
 		t.Fatal(err)
 	}
 
