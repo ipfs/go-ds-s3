@@ -2,39 +2,42 @@ name: local-s3
 description: prepare setup for tests using local S3
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Set env for minio
+      id: minio
       shell: bash
       run: |
-        echo "LOCAL_S3=true" >> $GITHUB_ENV
-        echo "MINIO_REGION_NAME=local" >> $GITHUB_ENV
-        echo "MINIO_ROOT_USER=test" >> $GITHUB_ENV
-        echo "MINIO_ROOT_PASSWORD=testdslocal" >> $GITHUB_ENV
-        echo "MINIO_HOST=localhost" >> $GITHUB_ENV
-        echo "MINIO_PORT=9000" >> $GITHUB_ENV
+        echo 'LOCAL_S3=true' >> $GITHUB_ENV
+        echo 'MINIO_REGION_NAME=local' >> $GITHUB_ENV
+        echo 'MINIO_ROOT_USER=test' >> $GITHUB_ENV
+        echo 'MINIO_ROOT_PASSWORD=testdslocal' >> $GITHUB_ENV
         if [[ '${{ runner.os }}' == 'Linux' ]]; then
-          echo "MINIO_RELEASE=linux-amd64" >> $GITHUB_ENV
-          echo "MINIO_HOME=/usr/local/bin" >> $GITHUB_ENV
+          echo '::set-output name=release::linux-amd64'
+          echo '::set-output name=home::/usr/local/bin'
         elif [[ '${{ runner.os }}' == 'Windows' ]]; then
-          echo "MINIO_RELEASE=windows-amd64" >> $GITHUB_ENV
-          echo "MINIO_HOME=/usr/bin" >> $GITHUB_ENV
+          echo '::set-output name=release::windows-amd64'
+          echo "::set-output name=home::/usr/bin"
         elif [[ '${{ runner.os }}' == 'macOS' ]]; then
-          echo "MINIO_RELEASE=darwin-amd64" >> $GITHUB_ENV
-          echo "MINIO_HOME=/usr/local/bin" >> $GITHUB_ENV
+          echo '::set-output name=release::darwin-amd64'
+          echo '::set-output name=home::/usr/local/bin'
         fi
     - name: Download minio
       shell: bash
       run: |
-        curl --retry 5 --no-progress-meter --output '${{ env.MINIO_HOME }}/minio' 'https://dl.min.io/server/minio/release/${{ env.MINIO_RELEASE }}/archive/minio.RELEASE.2021-07-15T22-27-34Z'
-        curl --retry 5 --no-progress-meter --output '${{ env.MINIO_HOME }}/mc' 'https://dl.min.io/client/mc/release/${{ env.MINIO_RELEASE }}/archive/mc.RELEASE.2021-07-27T06-46-19Z'
-        chmod +x '${{ env.MINIO_HOME }}/minio'
-        chmod +x '${{ env.MINIO_HOME }}/mc'
+        curl --retry 5 --no-progress-meter --output '${{ steps.minio.outputs.home }}/minio' 'https://dl.min.io/server/minio/release/${{ steps.minio.outputs.release }}/archive/minio.RELEASE.2021-07-15T22-27-34Z'
+        curl --retry 5 --no-progress-meter --output '${{ steps.minio.outputs.home }}/mc' 'https://dl.min.io/client/mc/release/${{ steps.minio.outputs.release }}/archive/mc.RELEASE.2021-07-27T06-46-19Z'
+        chmod +x '${{ steps.minio.outputs.home }}/minio'
+        chmod +x '${{ steps.minio.outputs.home }}/mc'
     - name: Start minio
+      if: runner.os != 'Windows'
       shell: bash
-      run: minio server '${{ runner.temp }}/data' --address='${{ env.MINIO_HOST }}:${{ env.MINIO_PORT }}' &
+      run: minio server '${{ runner.temp }}/minio.data' &
+    - name: Start minio
+      if: runner.os == 'Windows'
+      shell: bash
+      run:  bash.exe -c 'minio server '"'"'${{ runner.temp }}/minio.data'"'"' &'
     - name: Check if minio is running
       shell: bash
       run: |
-        mc alias set minio 'http://${{ env.MINIO_HOST }}:${{ env.MINIO_PORT }}' '${{ env.MINIO_ROOT_USER }}' '${{ env.MINIO_ROOT_PASSWORD }}'
-        mc ls minio
+        mc alias set minio 'http://localhost:9000' '${{ env.MINIO_ROOT_USER }}' '${{ env.MINIO_ROOT_PASSWORD }}'
