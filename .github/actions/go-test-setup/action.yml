@@ -11,6 +11,8 @@ runs:
         echo "MINIO_REGION_NAME=local" >> $GITHUB_ENV
         echo "MINIO_ROOT_USER=test" >> $GITHUB_ENV
         echo "MINIO_ROOT_PASSWORD=testdslocal" >> $GITHUB_ENV
+        echo "MINIO_HOST=localhost" >> $GITHUB_ENV
+        echo "MINIO_PORT=9000" >> $GITHUB_ENV
         if [[ '${{ runner.os }}' == 'Linux' ]]; then
           echo "MINIO_RELEASE=linux-amd64" >> $GITHUB_ENV
           echo "MINIO_HOME=/usr/local/bin" >> $GITHUB_ENV
@@ -25,7 +27,14 @@ runs:
       shell: bash
       run: |
         curl --retry 5 --no-progress-meter --output '${{ env.MINIO_HOME }}/minio' 'https://dl.min.io/server/minio/release/${{ env.MINIO_RELEASE }}/archive/minio.RELEASE.2021-07-15T22-27-34Z'
+        curl --retry 5 --no-progress-meter --output '${{ env.MINIO_HOME }}/mc' 'https://dl.min.io/client/mc/release/${{ env.MINIO_RELEASE }}/archive/mc.RELEASE.2021-07-27T06-46-19Z'
         chmod +x '${{ env.MINIO_HOME }}/minio'
+        chmod +x '${{ env.MINIO_HOME }}/mc'
     - name: Start minio
       shell: bash
-      run: minio server '${{ runner.temp }}/data' --address=localhost:9000 &
+      run: minio server '${{ runner.temp }}/data' --address='${{ env.MINIO_HOST }}:${{ env.MINIO_PORT }}' &
+    - name: Check if minio is running
+      shell: bash
+      run: |
+        mc alias set minio 'http://${{ env.MINIO_HOST }}:${{ env.MINIO_PORT }}' '${{ env.MINIO_ROOT_USER }}' '${{ env.MINIO_ROOT_PASSWORD }}'
+        mc ls minio
