@@ -4,9 +4,28 @@ description: prepare setup for tests using local S3
 runs:
   using: "composite"
   steps:
-    - name: Set LOCAL_S3 env var
+    - name: Set env for minio
       shell: bash
-      run: echo "LOCAL_S3=true" >> $GITHUB_ENV
-    - name: Start local S3
+      run: |
+        echo "LOCAL_S3=true" >> $GITHUB_ENV
+        echo "MINIO_REGION_NAME=local" >> $GITHUB_ENV
+        echo "MINIO_ROOT_USER=test" >> $GITHUB_ENV
+        echo "MINIO_ROOT_PASSWORD=testdslocal" >> $GITHUB_ENV
+        if [[ '${{ runner.os }}' == 'Linux' ]]; then
+          echo "MINIO_RELEASE=linux-amd64" >> $GITHUB_ENV
+          echo "MINIO_HOME=/usr/local/bin" >> $GITHUB_ENV
+        elif [[ '${{ runner.os }}' == 'Windows' ]]; then
+          echo "MINIO_RELEASE=windows-amd64" >> $GITHUB_ENV
+          echo "MINIO_HOME=/usr/bin" >> $GITHUB_ENV
+        elif [[ '${{ runner.os }}' == 'macOS' ]]; then
+          echo "MINIO_RELEASE=darwin-amd64" >> $GITHUB_ENV
+          echo "MINIO_HOME=/usr/local/bin" >> $GITHUB_ENV
+        fi
+    - name: Download minio
       shell: bash
-      run: docker-compose up -d
+      run: |
+        curl --retry 5 --no-progress-meter --output '${{ env.MINIO_HOME }}/minio' 'https://dl.min.io/server/minio/release/${{ env.MINIO_RELEASE }}/archive/minio.RELEASE.2021-07-15T22-27-34Z'
+        chmod +x '${{ env.MINIO_HOME }}/minio'
+    - name: Start minio
+      shell: bash
+      run: minio server '${{ runner.temp }}/data' --address=localhost:9000 &
