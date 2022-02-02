@@ -30,13 +30,8 @@ runs:
         chmod +x '${{ steps.minio.outputs.home }}/minio'
         chmod +x '${{ steps.minio.outputs.home }}/mc'
     - name: Start minio
-      if: runner.os != 'Windows'
       shell: bash
-      run: minio server '${{ runner.temp }}/minio.data' &
-    - name: Start minio
-      if: runner.os == 'Windows'
-      shell: bash
-      run:  bash.exe -c 'minio server '"'"'${{ runner.temp }}/minio.data'"'"' &'
+      run: ( minio server '${{ runner.temp }}/minio.data' & )
     - name: Check if minio is running
       shell: bash
       run: |
