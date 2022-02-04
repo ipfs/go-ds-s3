@@ -8,28 +8,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: "Downloading IPFS"
-        id: "download"
+      - name: Read go-ipfs version from go.mod
+        id: ipfs
+        run: echo "::set-output name=version::$(go list -f '{{.Module.Version}}' github.com/ipfs/go-ipfs)"
+      - uses: ipfs/download-ipfs-distribution-action@v1
+        with:
+          version: "${{ steps.ipfs.outputs.version }}"
+      - name: Read Go version from IPFS
+        id: go
         run: |
-          # Determine the go-ipfs version to test against from the go.mod file
-          IPFS_VERSION="$(go list -f '{{.Module.Version}}' github.com/ipfs/go-ipfs)"
-          GOOS=$(go env GOOS)
-          GOARCH=$(go env GOARCH)
-          mkdir ~/bin
-          curl "https://dist.ipfs.io/go-ipfs/${IPFS_VERSION}/go-ipfs_${IPFS_VERSION}_${GOOS}-${GOARCH}.tar.gz" | tar -O -zx go-ipfs/ipfs > ~/bin/ipfs
-          chmod +x ~/bin/ipfs
-          # Determine the go version to build against from the go-ipfs binary.
-          echo "::set-output name=target-go-version::$(~/bin/ipfs version --all | sed -n 's/Golang version: go//p')"
+          echo "::set-output name=version::$(ipfs version --all | sed -n 's/Golang version: go//p')"
       - uses: actions/setup-go@v2
         with:
-          go-version: "${{steps.download.outputs.target-go-version}}"
-      - name: Go information
+          go-version: "${{ steps.go.outputs.version }}"
+      - name: Print Go information
         run: |
           go version
           go env
-      - name: Initialize IPFS Repo
-        run: ~/bin/ipfs init
-      - name: Install Plugins
+      - name: Initialize IPFS repo
+        run: ipfs init
+      - name: Install plugins
         run: make install
-      - name: ipfs version
-        run: ~/bin/ipfs version
+      - name: Print IPFS version
+        run: ipfs version
