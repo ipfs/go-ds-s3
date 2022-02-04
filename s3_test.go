@@ -49,6 +49,9 @@ func TestSuiteLocalS3(t *testing.T) {
 }
 
 func devMakeBucket(s3obj *s3.S3, bucketName string) error {
+	s3obj.DeleteBucket(&s3.DeleteBucketInput{
+		Bucket: aws.String(bucketName),
+	})
 	_, err := s3obj.CreateBucket(&s3.CreateBucketInput{
 		Bucket: aws.String(bucketName),
 	})
