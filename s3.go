@@ -359,7 +359,7 @@ func (b *s3Batch) newPutJob(ctx context.Context, k ds.Key, value []byte) func() 
 
 func (b *s3Batch) newDeleteJob(ctx context.Context, objs []*s3.ObjectIdentifier) func() error {
 	return func() error {
-		resp, err := b.s.S3.DeleteObjects(&s3.DeleteObjectsInput{
+		resp, err := b.s.S3.DeleteObjectsWithContext(ctx, &s3.DeleteObjectsInput{
 			Bucket: aws.String(b.s.Bucket),
 			Delete: &s3.Delete{
 				Objects: objs,
