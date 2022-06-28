@@ -1,6 +1,6 @@
-# S3 Datastore Implementation
+# Google Cloud Storage Datastore Implementation
 
-This is an implementation of the datastore interface backed by amazon s3.
+This is an implementation of the datastore interface backed by google cloud storage.
 
 **NOTE:** Plugins only work on Linux and MacOS at the moment. You can track the progress of this issue here: https://github.com/golang/go/issues/19282
 

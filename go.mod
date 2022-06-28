@@ -1,4 +1,4 @@
-module github.com/ipfs/go-ds-s3
+module github.com/luanet/go-ds-gcs
 
 require (
 	github.com/aws/aws-sdk-go v1.35.30
