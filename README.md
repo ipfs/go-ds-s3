@@ -28,10 +28,10 @@ As go plugins can be finicky to correctly compile and install, you may want to c
 > cd go-ipfs
 
 # Pull in the datastore plugin (you can specify a version other than latest if you'd like).
-> go get github.com/ipfs/go-ds-s3/plugin@latest
+> go get github.com/luanet/go-ds-gcs/plugin@latest
 
 # Add the plugin to the preload list.
-> echo "s3ds github.com/ipfs/go-ds-s3/plugin 0" >> plugin/loader/preload_list
+> echo "s3ds github.com/luanet/go-ds-gcs/plugin 0" >> plugin/loader/preload_list
 
 # ( this first pass will fail ) Try to build go-ipfs with the plugin
 > make build
@@ -50,9 +50,9 @@ As go plugins can be finicky to correctly compile and install, you may want to c
 
 For a brand new ipfs instance (no data stored yet):
 
-1. Copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so (or run `make install` if you are installing locally).
+1. Copy gcsplugin.so $IPFS_DIR/plugins/go-ds-gcs.so (or run `make install` if you are installing locally).
 2. Run `ipfs init`.
-3. Edit $IPFS_DIR/config to include s3 details (see Configuration below).
+3. Edit $IPFS_DIR/config to include gcs details (see Configuration below).
 4. Overwrite `$IPFS_DIR/datastore_spec` as specified below (*Don't do this on an instance with existing data - it will be lost*).
 
 ### Configuration
@@ -67,41 +67,12 @@ The config file should include the following:
       "mounts": [
         {
           "child": {
-            "type": "s3ds",
-            "region": "us-east-1",
+            "type": "gcs",
             "bucket": "$bucketname",
-            "rootDirectory": "$bucketsubdirectory",
-            "accessKey": "",
-            "secretKey": ""
+            "workers": 1
           },
           "mountpoint": "/blocks",
-          "prefix": "s3.datastore",
-          "type": "measure"
-        },
-```
-
-If the access and secret key are blank they will be loaded from the usual ~/.aws/.
-If you are on another S3 compatible provider, e.g. Linode, then your config should be:
-
-```json
-{
-  "Datastore": {
-  ...
-
-    "Spec": {
-      "mounts": [
-        {
-          "child": {
-            "type": "s3ds",
-            "region": "us-east-1",
-            "bucket": "$bucketname",
-            "rootDirectory": "$bucketsubdirectory",
-            "regionEndpoint": "us-east-1.linodeobjects.com",
-            "accessKey": "",
-            "secretKey": ""
-          },
-          "mountpoint": "/blocks",
-          "prefix": "s3.datastore",
+          "prefix": "gcs.datastore",
           "type": "measure"
         },
 ```
@@ -109,7 +80,7 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
 If you are configuring a brand new ipfs instance without any data, you can overwrite the datastore_spec file with:
 
 ```
-{"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"us-east-1","rootDirectory":"$bucketsubdirectory"},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
+{"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks"},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
 ```
 
 Otherwise, you need to do a datastore migration.
