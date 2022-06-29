@@ -12,6 +12,7 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	dsq "github.com/ipfs/go-datastore/query"
 	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -38,8 +39,9 @@ type GcsBucket struct {
 }
 
 type Config struct {
-	Bucket  string
-	Workers int
+	Bucket              string
+	CredentialsFilePath string
+	Workers             int
 }
 
 func NewGcsDatastore(conf Config) (*GcsBucket, error) {
@@ -47,7 +49,7 @@ func NewGcsDatastore(conf Config) (*GcsBucket, error) {
 		conf.Workers = defaultWorkers
 	}
 
-	client, err := storage.NewClient(context.Background())
+	client, err := storage.NewClient(context.Background(), option.WithCredentialsFile(conf.CredentialsFilePath))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create new gcs client: %s", err)
 	}
