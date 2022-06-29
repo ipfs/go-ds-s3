@@ -27,12 +27,12 @@ go.mod: FORCE
 
 FORCE:
 
-s3plugin.so: plugin/main/main.go go.mod
+gcsplugin.so: plugin/main/main.go go.mod
 	CGO_ENABLED=1 $(GOCC) build $(GOFLAGS) -buildmode=plugin -o "$@" "$<"
 	chmod +x "$@"
 
-build: s3plugin.so
+build: gcsplugin.so
 	@echo "Built against" $(IPFS_VERSION)
 
 install: build
-	install -Dm700 s3plugin.so "$(IPFS_PATH)/plugins/go-ds-s3.so"
+	install -Dm700 gcsplugin.so "$(IPFS_PATH)/plugins/go-ds-gcs.so"

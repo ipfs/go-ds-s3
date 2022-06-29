@@ -1,7 +1,7 @@
 package main
 
 import (
-	plugin "github.com/ipfs/go-ds-s3/plugin"
+	plugin "github.com/luanet/go-ds-gcs/plugin"
 )
 
 var Plugins = plugin.Plugins //nolint
