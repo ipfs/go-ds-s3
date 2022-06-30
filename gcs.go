@@ -82,6 +82,7 @@ func (s *GcsBucket) Sync(ctx context.Context, prefix ds.Key) error {
 }
 
 func (s *GcsBucket) Get(ctx context.Context, k ds.Key) ([]byte, error) {
+	fmt.Println("Get file from gcs: ", k.String())
 	rc, err := s.Client.Bucket(s.Config.Bucket).Object(k.String()).NewReader(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Object(%q).NewReader: %v", k.String(), err)
@@ -142,6 +143,7 @@ func (s *GcsBucket) Query(ctx context.Context, q dsq.Query) (dsq.Results, error)
 		limit = listMax
 	}
 
+	fmt.Println("Quering prefix: ", q.Prefix)
 	it := s.Client.Bucket(s.Config.Bucket).Objects(ctx, &storage.Query{
 		Prefix:    q.Prefix,
 		Delimiter: "/",
@@ -150,19 +152,21 @@ func (s *GcsBucket) Query(ctx context.Context, q dsq.Query) (dsq.Results, error)
 	nextValue := func() (dsq.Result, bool) {
 		attrs, err := it.Next()
 		if err == iterator.Done {
-			return dsq.Result{Error: err}, false
+			return dsq.Result{}, true
 		}
 
 		if err != nil {
 			return dsq.Result{Error: err}, false
 		}
 
+		fmt.Println("Found file: ", attrs.Name)
 		entry := dsq.Entry{
 			Key:  ds.NewKey(attrs.Name).String(),
 			Size: int(attrs.Size),
 		}
 
 		if !q.KeysOnly {
+			fmt.Println("Getting file: ", attrs.Name)
 			value, err := s.Get(ctx, ds.NewKey(entry.Key))
 			if err != nil {
 				return dsq.Result{Error: err}, false

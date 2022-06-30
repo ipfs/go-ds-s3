@@ -35,4 +35,4 @@ build: gcsplugin.so
 	@echo "Built against" $(IPFS_VERSION)
 
 install: build
-	install -Dm700 gcsplugin.so "$(IPFS_PATH)/plugins/go-ds-gcs.so"
+	install -m 700 gcsplugin.so "$(IPFS_PATH)/plugins/go-ds-gcs.so"
