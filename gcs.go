@@ -40,6 +40,7 @@ type GcsBucket struct {
 
 type Config struct {
 	Bucket              string
+	RootDirectory       string
 	CredentialsFilePath string
 	Workers             int
 }
@@ -62,7 +63,7 @@ func NewGcsDatastore(conf Config) (*GcsBucket, error) {
 
 func (s *GcsBucket) Put(ctx context.Context, k ds.Key, value []byte) error {
 	// Upload an object with storage.Writer.
-	wc := s.Client.Bucket(s.Config.Bucket).Object(k.String()).NewWriter(ctx)
+	wc := s.Client.Bucket(s.Config.Bucket).Object(s.gcsPath(k.String())).NewWriter(ctx)
 	wc.ChunkSize = 0 // note retries are not supported for chunk size 0.
 
 	if _, err := wc.Write(value); err != nil {
@@ -82,8 +83,7 @@ func (s *GcsBucket) Sync(ctx context.Context, prefix ds.Key) error {
 }
 
 func (s *GcsBucket) Get(ctx context.Context, k ds.Key) ([]byte, error) {
-	fmt.Println("Get file from gcs: ", k.String())
-	rc, err := s.Client.Bucket(s.Config.Bucket).Object(k.String()).NewReader(ctx)
+	rc, err := s.Client.Bucket(s.Config.Bucket).Object(s.gcsPath(k.String())).NewReader(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Object(%q).NewReader: %v", k.String(), err)
 	}
@@ -94,7 +94,7 @@ func (s *GcsBucket) Get(ctx context.Context, k ds.Key) ([]byte, error) {
 }
 
 func (s *GcsBucket) Has(ctx context.Context, k ds.Key) (exists bool, err error) {
-	o := s.Client.Bucket(s.Config.Bucket).Object(k.String())
+	o := s.Client.Bucket(s.Config.Bucket).Object(s.gcsPath(k.String()))
 	if _, err := o.Attrs(ctx); err != nil {
 		return false, nil
 	}
@@ -103,7 +103,7 @@ func (s *GcsBucket) Has(ctx context.Context, k ds.Key) (exists bool, err error) 
 }
 
 func (s *GcsBucket) GetSize(ctx context.Context, k ds.Key) (size int, err error) {
-	o := s.Client.Bucket(s.Config.Bucket).Object(k.String())
+	o := s.Client.Bucket(s.Config.Bucket).Object(s.gcsPath(k.String()))
 	attrs, err := o.Attrs(ctx)
 	if err != nil {
 		return -1, ds.ErrNotFound
@@ -113,7 +113,7 @@ func (s *GcsBucket) GetSize(ctx context.Context, k ds.Key) (size int, err error)
 }
 
 func (s *GcsBucket) Delete(ctx context.Context, k ds.Key) error {
-	o := s.Client.Bucket(s.Config.Bucket).Object(k.String())
+	o := s.Client.Bucket(s.Config.Bucket).Object(s.gcsPath(k.String()))
 	// Optional: set a generation-match precondition to avoid potential race
 	// conditions and data corruptions. The request to upload is aborted if the
 	// object's generation number does not match your precondition.
@@ -131,60 +131,7 @@ func (s *GcsBucket) Delete(ctx context.Context, k ds.Key) error {
 }
 
 func (s *GcsBucket) Query(ctx context.Context, q dsq.Query) (dsq.Results, error) {
-	return nil, fmt.Errorf("TODO implement query for gcs datastore?")
-	if q.Orders != nil || q.Filters != nil {
-		return nil, fmt.Errorf("s3ds: filters or orders are not supported")
-	}
-
-	// S3 store a "/foo" key as "foo" so we need to trim the leading "/"
-	q.Prefix = strings.TrimPrefix(q.Prefix, "/")
-
-	limit := q.Limit + q.Offset
-	if limit == 0 || limit > listMax {
-		limit = listMax
-	}
-
-	fmt.Println("Quering prefix: ", q.Prefix)
-	it := s.Client.Bucket(s.Config.Bucket).Objects(ctx, &storage.Query{
-		Prefix:    q.Prefix,
-		Delimiter: "/",
-	})
-
-	nextValue := func() (dsq.Result, bool) {
-		attrs, err := it.Next()
-		if err == iterator.Done {
-			return dsq.Result{}, true
-		}
-
-		if err != nil {
-			return dsq.Result{Error: err}, false
-		}
-
-		fmt.Println("Found file: ", attrs.Name)
-		entry := dsq.Entry{
-			Key:  ds.NewKey(attrs.Name).String(),
-			Size: int(attrs.Size),
-		}
-
-		if !q.KeysOnly {
-			fmt.Println("Getting file: ", attrs.Name)
-			value, err := s.Get(ctx, ds.NewKey(entry.Key))
-			if err != nil {
-				return dsq.Result{Error: err}, false
-			}
-
-			entry.Value = value
-		}
-
-		return dsq.Result{Entry: entry}, true
-	}
-
-	return dsq.ResultsFromIterator(q, dsq.Iterator{
-		Close: func() error {
-			return nil
-		},
-		Next: nextValue,
-	}), nil
+	return nil, fmt.Errorf("Todo: implement query for gcs datastore.")
 }
 
 func (s *GcsBucket) Batch(_ context.Context) (ds.Batch, error) {
@@ -197,6 +144,10 @@ func (s *GcsBucket) Batch(_ context.Context) (ds.Batch, error) {
 
 func (s *GcsBucket) Close() error {
 	return nil
+}
+
+func (s *GcsBucket) gcsPath(p string) string {
+	return path.Join(s.Config.RootDirectory, strings.TrimPrefix(p, "/"))
 }
 
 type gcsBatch struct {

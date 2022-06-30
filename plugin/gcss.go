@@ -38,6 +38,11 @@ func (gsp GcsPlugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 			return nil, fmt.Errorf("gcs: no bucket specified")
 		}
 
+		rootDirectory, ok := m["rootDirectory"].(string)
+		if !ok {
+			return nil, fmt.Errorf("gcs: no root directory specified")
+		}
+
 		credentialsPath, ok := m["credentialsFilePath"].(string)
 		if !ok {
 			return nil, fmt.Errorf("gcs: no credentials path specified")
@@ -60,6 +65,7 @@ func (gsp GcsPlugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 		return &GcsConfig{
 			cfg: gcss.Config{
 				Bucket:              bucket,
+				RootDirectory:       rootDirectory,
 				CredentialsFilePath: credentialsPath,
 				Workers:             workers,
 			},
