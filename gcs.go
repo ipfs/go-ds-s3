@@ -131,7 +131,7 @@ func (s *GcsBucket) Delete(ctx context.Context, k ds.Key) error {
 }
 
 func (s *GcsBucket) Query(ctx context.Context, q dsq.Query) (dsq.Results, error) {
-	return nil, errors.New("TODO implement query for gcs datastore?")
+	return nil, fmt.Errorf("TODO implement query for gcs datastore?")
 	if q.Orders != nil || q.Filters != nil {
 		return nil, fmt.Errorf("s3ds: filters or orders are not supported")
 	}
