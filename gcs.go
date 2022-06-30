@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"cloud.google.com/go/storage"
 	ds "github.com/ipfs/go-datastore"
 	dsq "github.com/ipfs/go-datastore/query"
-	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
