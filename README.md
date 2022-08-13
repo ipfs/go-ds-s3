@@ -17,7 +17,7 @@ You can then install it into your local IPFS repo by running `make install`.
 
 ## Bundling
 
-As go plugins can be finicky to correctly compile and install, you may want to consider bundling this plugin and re-building go-ipfs. If you do it this way, you won't need to install the `.so` file in your local repo and you won't need to worry about getting all the versions to match up.
+As go plugins can be finicky to correctly compile and install, you may want to consider bundling this plugin and re-building go-ipfs. If you do it this way, you won't need to install the `.so` file in your local repo, i.e following the above Building and Installing section, and you won't need to worry about getting all the versions to match up.
 
 ```bash
 # We use go modules for everything.
