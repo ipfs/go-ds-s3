@@ -56,6 +56,22 @@ type Config struct {
 	RootDirectory       string
 	Workers             int
 	CredentialsEndpoint string
+	KeyTransform        string
+}
+
+var KeyTransforms = map[string]func(ds.Key) string{
+	"default": func(k ds.Key) string {
+		return k.String()
+	},
+	"suffix": func(k ds.Key) string {
+		return k.String() + "/data"
+	},
+	"next-to-last/2": func(k ds.Key) string {
+		s := k.String()
+		offset := 1
+		start := len(s) - 2 - offset
+		return s[start:start+2] + "/" + s
+	},
 }
 
 func NewS3Datastore(conf Config) (*S3Bucket, error) {
@@ -108,7 +124,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 func (s *S3Bucket) Put(ctx context.Context, k ds.Key, value []byte) error {
 	_, err := s.S3.PutObjectWithContext(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
+		Key:    aws.String(s.s3Path(prepareKey(s.Config, k))),
 		Body:   bytes.NewReader(value),
 	})
 	return err
@@ -121,7 +137,7 @@ func (s *S3Bucket) Sync(ctx context.Context, prefix ds.Key) error {
 func (s *S3Bucket) Get(ctx context.Context, k ds.Key) ([]byte, error) {
 	resp, err := s.S3.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
+		Key:    aws.String(s.s3Path(prepareKey(s.Config, k))),
 	})
 	if err != nil {
 		if isNotFound(err) {
@@ -148,7 +164,7 @@ func (s *S3Bucket) Has(ctx context.Context, k ds.Key) (exists bool, err error) {
 func (s *S3Bucket) GetSize(ctx context.Context, k ds.Key) (size int, err error) {
 	resp, err := s.S3.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
+		Key:    aws.String(s.s3Path(prepareKey(s.Config, k))),
 	})
 	if err != nil {
 		if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == "NotFound" {
@@ -162,13 +178,17 @@ func (s *S3Bucket) GetSize(ctx context.Context, k ds.Key) (size int, err error) 
 func (s *S3Bucket) Delete(ctx context.Context, k ds.Key) error {
 	_, err := s.S3.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
+		Key:    aws.String(s.s3Path(prepareKey(s.Config, k))),
 	})
 	if isNotFound(err) {
 		// delete is idempotent
 		err = nil
 	}
 	return err
+}
+
+func prepareKey(cfg Config, k ds.Key) string {
+	return KeyTransforms[cfg.KeyTransform](k)
 }
 
 func (s *S3Bucket) Query(ctx context.Context, q dsq.Query) (dsq.Results, error) {

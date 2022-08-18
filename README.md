@@ -50,10 +50,10 @@ As go plugins can be finicky to correctly compile and install, you may want to c
 
 For a brand new ipfs instance (no data stored yet):
 
-1. Copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so (or run `make install` if you are installing locally).
+1. Copy `s3plugin.so` to `$IPFS_DIR/plugins/go-ds-s3.so` (or run `make install` if you are installing locally).
 2. Run `ipfs init`.
-3. Edit $IPFS_DIR/config to include s3 details (see Configuration below).
-4. Overwrite `$IPFS_DIR/datastore_spec` as specified below (*Don't do this on an instance with existing data - it will be lost*).
+3. Edit `$IPFS_DIR/config` to include s3 details for the **first** Datastore mount (see [Configuration](#configuration) below).
+4. Overwrite `$IPFS_DIR/datastore_spec` (*Don't do this on an instance with existing data - it will be lost*. See [Configuration](#configuration) below).
 
 ### Configuration
 
@@ -68,11 +68,12 @@ The config file should include the following:
         {
           "child": {
             "type": "s3ds",
-            "region": "us-east-1",
+            "region": "$bucketregion",
             "bucket": "$bucketname",
             "rootDirectory": "$bucketsubdirectory",
             "accessKey": "",
-            "secretKey": ""
+            "secretKey": "",
+            "keyTransform": "$keytransformmethod"
           },
           "mountpoint": "/blocks",
           "prefix": "s3.datastore",
@@ -81,6 +82,18 @@ The config file should include the following:
 ```
 
 If the access and secret key are blank they will be loaded from the usual ~/.aws/.
+
+The key transform allows you to specify how data is stored behind S3 keys. It must be one of the available methods:
+
+`default`
+- No sharding.
+
+`suffix`
+- Shards by storing block data at a key with a `data` suffix. E.g. `CIQJ7IHPGOFUJT5UMXIW6CUDSNH6AVKMEOXI3UM3VLYJRZUISUMGCXQ/data`
+
+`next-to-last/2`
+- Shards by storing block data based on the second to last 2 characters of its key. E.g. `CX/CIQJ7IHPGOFUJT5UMXIW6CUDSNH6AVKMEOXI3UM3VLYJRZUISUMGCXQ`
+
 If you are on another S3 compatible provider, e.g. Linode, then your config should be:
 
 ```json
@@ -93,12 +106,13 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
         {
           "child": {
             "type": "s3ds",
-            "region": "us-east-1",
+            "region": "$bucketregion",
             "bucket": "$bucketname",
             "rootDirectory": "$bucketsubdirectory",
             "regionEndpoint": "us-east-1.linodeobjects.com",
             "accessKey": "",
-            "secretKey": ""
+            "secretKey": "",
+            "keyTransform": "$keytransformmethod"
           },
           "mountpoint": "/blocks",
           "prefix": "s3.datastore",
@@ -109,7 +123,7 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
 If you are configuring a brand new ipfs instance without any data, you can overwrite the datastore_spec file with:
 
 ```
-{"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"us-east-1","rootDirectory":"$bucketsubdirectory"},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
+{"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"$bucketregion","rootDirectory":"$bucketsubdirectory"},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
 ```
 
 Otherwise, you need to do a datastore migration.
@@ -119,6 +133,12 @@ Otherwise, you need to do a datastore migration.
 Feel free to join in. All welcome. Open an [issue](https://github.com/ipfs/go-ipfs-example-plugin/issues)!
 
 This repository falls under the IPFS [Code of Conduct](https://github.com/ipfs/community/blob/master/code-of-conduct.md).
+
+### Local Development
+
+```
+go mod vendor
+```
 
 ### Want to hack on IPFS?
 

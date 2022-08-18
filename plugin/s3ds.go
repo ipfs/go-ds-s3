@@ -3,7 +3,7 @@ package plugin
 import (
 	"fmt"
 
-	s3ds "github.com/ipfs/go-ds-s3"
+	s3ds "github.com/3box/go-ds-s3"
 	"github.com/ipfs/go-ipfs/plugin"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -98,6 +98,18 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 			}
 		}
 
+		var keyTransform string
+		if v, ok := m["keyTransform"]; ok {
+			if v == "" {
+				keyTransform = "default"
+			} else {
+				keyTransform, ok = v.(string)
+				if !ok {
+					return nil, fmt.Errorf("s3ds: keyTransform is not a valid key transform method")
+				}
+			}
+		}
+
 		return &S3Config{
 			cfg: s3ds.Config{
 				Region:              region,
@@ -109,6 +121,7 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 				Workers:             workers,
 				RegionEndpoint:      endpoint,
 				CredentialsEndpoint: credentialsEndpoint,
+				KeyTransform:        keyTransform,
 			},
 		}, nil
 	}

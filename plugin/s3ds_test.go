@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	s3ds "github.com/ipfs/go-ds-s3"
+	s3ds "github.com/3box/go-ds-s3"
 )
 
 func TestS3PluginDatastoreConfigParser(t *testing.T) {
@@ -47,6 +47,7 @@ func TestS3PluginDatastoreConfigParser(t *testing.T) {
 				"regionEndpoint":      "someendpoint",
 				"workers":             42.0,
 				"credentialsEndpoint": "somecredendpoint",
+				"keyTransform":        "default",
 			},
 			Want: &S3Config{cfg: s3ds.Config{
 				Region:              "someregion",
@@ -58,6 +59,7 @@ func TestS3PluginDatastoreConfigParser(t *testing.T) {
 				RegionEndpoint:      "someendpoint",
 				Workers:             42,
 				CredentialsEndpoint: "somecredendpoint",
+				KeyTransform:        "default",
 			}},
 		},
 	}
