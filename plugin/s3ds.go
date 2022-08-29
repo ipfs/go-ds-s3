@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	s3ds "github.com/3box/go-ds-s3"
-	"github.com/ipfs/go-ipfs/plugin"
-	"github.com/ipfs/go-ipfs/repo"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/ipfs/kubo/plugin"
+	"github.com/ipfs/kubo/repo"
+	"github.com/ipfs/kubo/repo/fsrepo"
 )
 
 var Plugins = []plugin.Plugin{
