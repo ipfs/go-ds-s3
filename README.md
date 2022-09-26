@@ -6,26 +6,26 @@ This is an implementation of the datastore interface backed by amazon s3.
 
 ## Building and Installing
 
-You must build the plugin with the *exact* version of go used to build the go-ipfs binary you will use it with. You can find the go version for go-ipfs builds from dist.ipfs.io in the build-info file, e.g. https://dist.ipfs.io/go-ipfs/v0.4.22/build-info or by running `ipfs version --all`.
+You must build the plugin with the *exact* version of go used to build the kubo binary you will use it with. You can find the go version for kubo builds from dist.ipfs.io in the build-info file, e.g. https://dist.ipfs.io/kubo/v0.4.22/build-info or by running `ipfs version --all`.
 
 In addition to needing the exact version of go, you need to build the correct version of this plugin.
 
-* To build against a released version of go-ipfs, checkout the `release/v$VERSION` branch and build.
-* To build against a custom (local) build of go-ipfs, run `make IPFS_VERSION=/path/to/go-ipfs/source`.
+* To build against a released version of kubo, checkout the `release/v$VERSION` branch and build.
+* To build against a custom (local) build of kubo, run `make IPFS_VERSION=/path/to/kubo/source`.
 
 You can then install it into your local IPFS repo by running `make install`.
 
 ## Bundling
 
-As go plugins can be finicky to correctly compile and install, you may want to consider bundling this plugin and re-building go-ipfs. If you do it this way, you won't need to install the `.so` file in your local repo, i.e following the above Building and Installing section, and you won't need to worry about getting all the versions to match up.
+As go plugins can be finicky to correctly compile and install, you may want to consider bundling this plugin and re-building kubo. If you do it this way, you won't need to install the `.so` file in your local repo, i.e following the above Building and Installing section, and you won't need to worry about getting all the versions to match up.
 
 ```bash
 # We use go modules for everything.
 > export GO111MODULE=on
 
-# Clone go-ipfs.
-> git clone https://github.com/ipfs/go-ipfs
-> cd go-ipfs
+# Clone kubo.
+> git clone https://github.com/ipfs/kubo
+> cd kubo
 
 # Pull in the datastore plugin (you can specify a version other than latest if you'd like).
 > go get github.com/ipfs/go-ds-s3/plugin@latest
@@ -33,16 +33,16 @@ As go plugins can be finicky to correctly compile and install, you may want to c
 # Add the plugin to the preload list.
 > echo -en "\ns3ds github.com/ipfs/go-ds-s3/plugin 0" >> plugin/loader/preload_list
 
-# ( this first pass will fail ) Try to build go-ipfs with the plugin
+# ( this first pass will fail ) Try to build kubo with the plugin
 > make build
 
 # Update the deptree
 > go mod tidy
 
-# Now rebuild go-ipfs with the plugin
+# Now rebuild kubo with the plugin
 > make build
 
-# (Optionally) install go-ipfs
+# (Optionally) install kubo
 > make install
 ```
 

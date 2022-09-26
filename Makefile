@@ -9,14 +9,14 @@ IPFS_PATH ?= $(HOME)/.ipfs
 
 # If set, override the IPFS version to build against. This _modifies_ the local
 # go.mod/go.sum files and permanently sets this version.
-IPFS_VERSION ?= $(lastword $(shell $(GOCC) list -m github.com/ipfs/go-ipfs))
+IPFS_VERSION ?= $(lastword $(shell $(GOCC) list -m github.com/ipfs/kubo))
 
 # make reproducible
 ifneq ($(findstring /,$(IPFS_VERSION)),)
-# Locally built go-ipfs
+# Locally built kubo
 GOFLAGS += -asmflags=all=-trimpath="$(GOPATH)" -gcflags=all=-trimpath="$(GOPATH)"
 else
-# Remote version of go-ipfs (e.g. via `go get -trimpath` or official distribution)
+# Remote version of kubo (e.g. via `go get -trimpath` or official distribution)
 GOFLAGS += -trimpath
 endif
 
