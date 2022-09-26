@@ -6,14 +6,14 @@ set -eo pipefail
 
 GOPATH="$($GOCC env GOPATH)"
 VERSION="$1"
-PKG=github.com/ipfs/go-ipfs
+PKG=github.com/ipfs/kubo
 
 if [[ "$VERSION" == /* ]]; then
     # Build against a local repo
     MODFILE="$VERSION/go.mod"
-    $GOCC mod edit -replace "github.com/ipfs/go-ipfs=$VERSION"
+    $GOCC mod edit -replace "github.com/ipfs/kubo=$VERSION"
 else
-    $GOCC mod edit -dropreplace=github.com/ipfs/go-ipfs
+    $GOCC mod edit -dropreplace=github.com/ipfs/kubo
     # Resolve the exact version/package name
     MODFILE="$(go list -f '{{.GoMod}}' -m "$PKG@$VERSION")"
     resolvedver="$(go list -f '{{.Version}}' -m "$PKG@$VERSION")"
