@@ -1,7 +1,7 @@
 # Dockerfile and script to integrate the go-ds-s3 plugin
 
 The Dockerfile builds IPFS and the go-ds-s3 plugin together using the same golang version.
-It copies the relevant files to the new Docker image.
+It copies the relevant files to the final Docker image.
 
 We also copy the `001-config.sh` shell script to manipulate the IPFS config file before startup.
 
@@ -22,8 +22,8 @@ The init script injects the following config in the `Swarm.ResourceMgr.Limits.Sy
 }
 ```
 
-The script also inject the correct config in the `Datastore.Spec` object to setup the plugin and
-update the `datastore_spec` file to reflect the new configuration.
+The script also injects the correct config in the `Datastore.Spec` object to setup the plugin and
+update the `datastore_spec` file to reflect the new datastore configuration.
 
 Edit the `001-config.sh` to fit your use case.
 
