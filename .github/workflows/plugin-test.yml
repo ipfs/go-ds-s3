@@ -10,14 +10,14 @@ jobs:
       - uses: actions/checkout@v2
       - name: Read go-ipfs version from go.mod
         id: ipfs
-        run: echo "::set-output name=version::$(go list -f '{{.Module.Version}}' github.com/ipfs/kubo)"
+        run: echo "version=$(go list -f '{{.Module.Version}}' github.com/ipfs/kubo)" >> $GITHUB_OUTPUT
       - uses: ipfs/download-ipfs-distribution-action@v1
         with:
           version: "${{ steps.ipfs.outputs.version }}"
       - name: Read Go version from IPFS
         id: go
         run: |
-          echo "::set-output name=version::$(ipfs version --all | sed -n 's/Golang version: go//p')"
+          echo "version=$(ipfs version --all | sed -n 's/Golang version: go//p')" >> $GITHUB_OUTPUT
       - uses: actions/setup-go@v2
         with:
           go-version: "${{ steps.go.outputs.version }}"
