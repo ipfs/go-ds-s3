@@ -7,29 +7,16 @@ We also copy the `001-config.sh` shell script to manipulate the IPFS config file
 
 ## Config changes
 
-The init script injects the following config in the `Swarm.ResourceMgr.Limits.System` object:
-
-```
-{ 
-    Memory: 1073741824, 
-    FD: 1024, 
-    Conns: 1024, 
-    ConnsInbound: 256, 
-    ConnsOutboun: 1024, 
-    Streams: 16384, 
-    StreamsInbound: 4096, 
-    StreamsOutbound: 16384 
-}
-```
-
-The script also injects the correct config in the `Datastore.Spec` object to setup the plugin and
+The script injects the correct config in the `Datastore.Spec` object to setup the plugin and
 update the `datastore_spec` file to reflect the new datastore configuration.
 
 Edit the `001-config.sh` to fit your use case.
 
 ## Building the image
 
-`docker build -t my-ipfs-image .`
+```
+docker build -t my-ipfs-image .
+```
 
 ## Running a container
 
