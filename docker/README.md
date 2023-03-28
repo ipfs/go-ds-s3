@@ -15,6 +15,7 @@ Edit the `001-config.sh` to fit your use case.
 ## Building the image
 
 ```
+cd docker
 docker build -t my-ipfs-image .
 ```
 
