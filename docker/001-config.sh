@@ -9,8 +9,6 @@ cp ${IPFS_PATH}/config ${IPFS_PATH}/config_bak
 # We inject the S3 plugin datastore
 # Important: Make sure your fill out the optionnal parameters $CLUSTER_S3_BUCKET, $CLUSTER_AWS_KEY, $CLUSTER_AWS_SECRET in the cloudformation parameters
 cat ${IPFS_PATH}/config_bak | \
-jq ".Swarm.ResourceMgr = {}" | \
-jq ".Swarm.ConnMgr = {}" | \
 jq ".Datastore.Spec = { 
     mounts: [
         {
