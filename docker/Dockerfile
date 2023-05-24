@@ -12,9 +12,10 @@ ENV GOPROXY direct
 
 # We clone Kubo source code.
 RUN git clone https://github.com/ipfs/kubo
+ENV SRC_DIR /kubo
 
 # Move to kubo folder
-WORKDIR /kubo
+WORKDIR $SRC_DIR
 
 # Install the plugin and build ipfs
 RUN go get github.com/ipfs/go-ds-s3/plugin@latest
@@ -25,12 +26,13 @@ RUN make build
 RUN make install
 
 # The actual IPFS image we will use
-FROM ipfs/kubo:latest
+FROM ipfs/kubo:v0.19.2
+ENV SRC_DIR /kubo
 
 # We copy the new binaries we built in the 'builder' stage (--from=builder)
-COPY --from=builder /kubo/cmd/ipfs/ipfs /usr/local/bin/ipfs
-COPY --from=builder /kubo/bin/container_daemon /usr/local/bin/start_ipfs
-COPY --from=builder /kubo/bin/container_init_run /usr/local/bin/container_init_run
+COPY --from=builder $SRC_DIR/cmd/ipfs/ipfs /usr/local/bin/ipfs
+COPY --from=builder $SRC_DIR/bin/container_daemon /usr/local/bin/start_ipfs
+COPY --from=builder $SRC_DIR/bin/container_init_run /usr/local/bin/container_init_run
 
 # Fix permissions on start_ipfs
 RUN chmod 0755 /usr/local/bin/start_ipfs
