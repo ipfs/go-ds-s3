@@ -3,6 +3,8 @@
 The Dockerfile builds IPFS and the go-ds-s3 plugin together using the same golang version.
 It copies the relevant files to the final Docker image.
 
+At the moment, this solution supports Kubo v0.19.x base Docker image. The v0.20.x is not yet supported.
+
 We also copy the `001-config.sh` shell script to manipulate the IPFS config file before startup.
 
 ## Config changes
@@ -24,7 +26,7 @@ docker build -t my-ipfs-image .
 ```
 export ipfs_staging=/local/data/ipfs_staging
 export ipfs_data=/local/data/ipfs_data
-docker run -d -v $ipfs_staging:/export -v $ipfs_data:/data/ipfs -p 4001:4001 -p 4001:4001/udp -p 127.0.0.1:8080:8080 -p 127.0.0.1:5001:5001 --env-file .env my-ipfs-image`
+docker run -d -v $ipfs_staging:/export -v $ipfs_data:/data/ipfs -p 4001:4001 -p 4001:4001/udp -p 127.0.0.1:8080:8080 -p 127.0.0.1:5001:5001 --env-file .env my-ipfs-image
 ```
 
 Note that we pass a `.env` file that contains the following environment variables:
