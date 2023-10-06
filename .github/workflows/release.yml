@@ -66,7 +66,7 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
     - name: Record variables
       run: |
-        V=`cat go-ds-s3-plugin/go.mod | grep github.com/ipfs/kubo | grep -o 'v.*'`
+        V=`cat go.mod | grep github.com/ipfs/kubo | grep -o 'v.*'`
         echo "KUBO_VERSION=$V" >> "$GITHUB_ENV"
         GOHOSTOS=`go env GOHOSTOS`
         echo "GOHOSTOS=$GOHOSTOS" >> "$GITHUB_ENV"
