@@ -4,16 +4,38 @@ This is an implementation of the datastore interface backed by amazon s3.
 
 **NOTE:** Plugins only work on Linux and MacOS at the moment. You can track the progress of this issue here: https://github.com/golang/go/issues/19282
 
-## Building and Installing
+## Quickstart
 
-You must build the plugin with the *exact* version of go used to build the kubo binary you will use it with. You can find the go version for kubo builds from dist.ipfs.io in the build-info file, e.g. https://dist.ipfs.io/kubo/v0.4.22/build-info or by running `ipfs version --all`.
+  1. Grab a plugin release from the [releases](https://github.com/ipfs/go-ds-s3/releases) section matching your Kubo version and install the plugin file in `~/.ipfs/plugins`.
+  2. Follow the instructions in the plugin's [README.md](go-ds-s3-plugin/README.md)
 
-In addition to needing the exact version of go, you need to build the correct version of this plugin.
 
-* To build against a released version of kubo, checkout the `release/v$VERSION` branch and build.
-* To build against a custom (local) build of kubo, run `make IPFS_VERSION=/path/to/kubo/source`.
+## Building and installing
 
-You can then install it into your local IPFS repo by running `make install`.
+
+The plugin can be manually built/installed for different versions of Kubo (starting with 0.23.0) with:
+
+```
+git checkout go-ds-s3-plugin/v<kubo-version>
+make plugin
+make install-plugin
+```
+
+## Updating to a new version
+
+  1. `go get` the Kubo release you want to build for. Make sure any other
+     dependencies are aligned to what Kubo uses.
+  2. `make install` and test.
+
+
+If you are building against dist-released versions of Kubo, you need to build using the same version of go that was used to build the release ([here](https://github.com/ipfs/distributions/blob/master/.tool-versions)).
+
+If you are building against your own build of Kubo you must align your plugin to use it.
+
+If you are updating this repo to produce a new version of the plugin:
+
+  1. Submit a PR so that integration tests run
+  2. Make a new tag `go-ds-s3-plugin/v<kubo_version>` and push it. This will build and release the plugin prebuilt binaries.
 
 ## Bundling
 
@@ -45,74 +67,6 @@ As go plugins can be finicky to correctly compile and install, you may want to c
 # (Optionally) install kubo
 > make install
 ```
-
-## Detailed Installation
-
-For a brand new ipfs instance (no data stored yet):
-
-1. Copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so (or run `make install` if you are installing locally).
-2. Run `ipfs init`.
-3. Edit $IPFS_DIR/config to include s3 details (see Configuration below).
-4. Overwrite `$IPFS_DIR/datastore_spec` as specified below (*Don't do this on an instance with existing data - it will be lost*).
-
-### Configuration
-
-The config file should include the following:
-```json
-{
-  "Datastore": {
-  ...
-
-    "Spec": {
-      "mounts": [
-        {
-          "child": {
-            "type": "s3ds",
-            "region": "us-east-1",
-            "bucket": "$bucketname",
-            "rootDirectory": "$bucketsubdirectory",
-            "accessKey": "",
-            "secretKey": ""
-          },
-          "mountpoint": "/blocks",
-          "prefix": "s3.datastore",
-          "type": "measure"
-        },
-```
-
-If the access and secret key are blank they will be loaded from the usual ~/.aws/.
-If you are on another S3 compatible provider, e.g. Linode, then your config should be:
-
-```json
-{
-  "Datastore": {
-  ...
-
-    "Spec": {
-      "mounts": [
-        {
-          "child": {
-            "type": "s3ds",
-            "region": "us-east-1",
-            "bucket": "$bucketname",
-            "rootDirectory": "$bucketsubdirectory",
-            "regionEndpoint": "us-east-1.linodeobjects.com",
-            "accessKey": "",
-            "secretKey": ""
-          },
-          "mountpoint": "/blocks",
-          "prefix": "s3.datastore",
-          "type": "measure"
-        },
-```
-
-If you are configuring a brand new ipfs instance without any data, you can overwrite the datastore_spec file with:
-
-```
-{"mounts":[{"bucket":"$bucketname","mountpoint":"/blocks","region":"us-east-1","rootDirectory":"$bucketsubdirectory"},{"mountpoint":"/","path":"datastore","type":"levelds"}],"type":"mount"}
-```
-
-Otherwise, you need to do a datastore migration.
 
 ## Contribute
 

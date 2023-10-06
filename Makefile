@@ -1,38 +1,15 @@
-# Force Go Modules
-GO111MODULE = on
+plugin:
+	$(MAKE) -C go-ds-s3-plugin all
 
-GOCC ?= go
-GOFLAGS ?=
+install-plugin:
+	$(MAKE) -C go-ds-s3-plugin install
 
-# If set, override the install location for plugins
-IPFS_PATH ?= $(HOME)/.ipfs
+dist-plugin:
+	$(MAKE) -C go-ds-s3-plugin dist
 
-# If set, override the IPFS version to build against. This _modifies_ the local
-# go.mod/go.sum files and permanently sets this version.
-IPFS_VERSION ?= $(lastword $(shell $(GOCC) list -m github.com/ipfs/kubo))
+check:
+	go vet ./...
+	staticcheck --checks all ./...
+	misspell -error -locale US .
 
-# make reproducible
-ifneq ($(findstring /,$(IPFS_VERSION)),)
-# Locally built kubo
-GOFLAGS += -asmflags=all=-trimpath="$(GOPATH)" -gcflags=all=-trimpath="$(GOPATH)"
-else
-# Remote version of kubo (e.g. via `go get -trimpath` or official distribution)
-GOFLAGS += -trimpath
-endif
-
-.PHONY: install build
-
-go.mod: FORCE
-	./set-target.sh $(IPFS_VERSION)
-
-FORCE:
-
-s3plugin.so: plugin/main/main.go go.mod
-	CGO_ENABLED=1 $(GOCC) build $(GOFLAGS) -buildmode=plugin -o "$@" "$<"
-	chmod +x "$@"
-
-build: s3plugin.so
-	@echo "Built against" $(IPFS_VERSION)
-
-install: build
-	install -Dm700 s3plugin.so "$(IPFS_PATH)/plugins/go-ds-s3.so"
+.PHONY: plugin install-plugin check
