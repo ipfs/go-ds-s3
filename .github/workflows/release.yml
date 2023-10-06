@@ -1,0 +1,120 @@
+name: Kubo plugin
+
+on:
+  push:
+
+
+env:
+  # must be same as official ipfs builds. See distributions/.tool-versions
+  GO_VERSION: "1.21.1"
+
+jobs:
+  build-artifacts:
+    name: "Build"
+    strategy:
+      matrix:
+        os:
+          - ubuntu-20.04
+          - macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    - name: Extract release name from tag
+      run: |
+        RELEASE=$(basename ${{ github.ref_name }})
+        echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
+    - name: Package plugin
+      run: make dist-plugin
+    - name: Record Go environment
+      run: |
+        echo "GOHOSTOS=$(go env GOHOSTOS)" >> "$GITHUB_ENV"
+        echo "GOHOSTARCH=$(go env GOHOSTARCH)" >> "$GITHUB_ENV"
+    - name: Rename package
+      run: |
+        NAME="go-ds-s3-plugin_${{ env.RELEASE }}_${{ env.GOHOSTOS }}_${{ env.GOHOSTARCH }}.tar.gz"
+        mv go-ds-s3-plugin/go-ds-s3-plugin.tar.gz "$NAME"
+        echo "ARTIFACT_NAME=$NAME" >> "$GITHUB_ENV"
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.ARTIFACT_NAME }}
+        path: go-ds-s3-plugin_*.tar.gz
+
+  test-artifacts:
+    name: "Test"
+    needs: build-artifacts
+    strategy:
+      matrix:
+        os:
+          - ubuntu-20.04
+# macos test fail with dist-built ipfs.
+#          - macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    - name: Record variables
+      run: |
+        V=`cat go.mod | grep github.com/ipfs/kubo | grep -o 'v.*'`
+        echo "KUBO_VERSION=$V" >> "$GITHUB_ENV"
+        GOHOSTOS=`go env GOHOSTOS`
+        echo "GOHOSTOS=$GOHOSTOS" >> "$GITHUB_ENV"
+        RELEASE=$(basename ${{ github.ref_name }})
+        echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
+        echo PLUGIN_ARTIFACT=go-ds-s3-plugin_${RELEASE}_${GOHOSTOS}_amd64.tar.gz >> "$GITHUB_ENV"
+    - name: Download artifact
+      id: download
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ env.PLUGIN_ARTIFACT }}
+    - name: Download unpack Kubo
+      run: |
+        wget -nv https://dist.ipfs.tech/kubo/${{ env.KUBO_VERSION }}/kubo_${{ env.KUBO_VERSION }}_${{ env.GOHOSTOS }}-amd64.tar.gz
+        tar -xf kubo_${{ env.KUBO_VERSION }}_${{ env.GOHOSTOS }}-amd64.tar.gz
+        tar -xf go-ds-s3-plugin_*.tar.gz
+        chmod +x kubo/ipfs
+    - name: Initialize IPFS and copy plugin
+      run: |
+        export IPFS_PATH=$(pwd)/ipfs-config
+        echo "IPFS_PATH=$IPFS_PATH" >> "$GITHUB_ENV"
+        ./kubo/ipfs init
+        mkdir -p ipfs-config/plugins
+        cp go-ds-s3-plugin/go-ds-s3-plugin ipfs-config/plugins/
+    - name: Check IPFS works with the plugin
+      run: ./kubo/ipfs version --all
+
+  release:
+    name: "Release"
+    needs: test-artifacts
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Download artifacts
+      id: download
+      uses: actions/download-artifact@v3
+    - name: Extract release name from tag
+      run: |
+        RELEASE=$(basename ${{ github.ref_name }})
+        echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/go-ds-s3-plugin/v')
+      with:
+        files: go-ds-s3-plugin_*.tar.gz/*
+        body: |
+          This is a binary build of the go-ds-s3 Kubo plugin targeting Kubo version ${{ env.RELEASE }}.
+
+          To install, download the relevant asset for your platform, unpack the plugin file (`go-ds-s3-plugin`) and place it in `~/.ipfs/plugins`. MacOS users will need to compile Kubo themselves, as the official releases have no CGO support.
+
+          See the included README.md for more information.
+        name: ${{ github.ref_name }}
