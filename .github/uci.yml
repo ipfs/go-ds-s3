@@ -1,0 +1,3 @@
+files:
+  - .github/workflows/go-check.yml
+  - .github/workflows/go-test.yml
