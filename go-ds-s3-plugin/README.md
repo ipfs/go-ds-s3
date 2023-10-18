@@ -6,12 +6,12 @@ On a brand new instance:
 
   1. Copy the binary `go-ds-s3-plugin` to `~/.ipfs/plugins`.
   2. Run `ipfs init`
-  3. Include a configuration for the plugin in the Kubo configuration (`.ipfs/config`) as explained below.
+  3. Update the datastore configuration in `.ipfs/config` as explained below. **This does not happen automatically**.
   4. Start Kubo (`ipfs daemon`). The plugin should be loaded automatically and the S3 backend should be used.
 
 ### Configuration
 
-The config file should include the following:
+The config file should include the following. This must be edited manually after initializing Kubo:
 
 ```json
 {
