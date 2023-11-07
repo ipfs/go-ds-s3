@@ -18,8 +18,8 @@ ENV SRC_DIR /kubo
 WORKDIR $SRC_DIR
 
 # Install the plugin and build ipfs
-RUN go get github.com/ipfs/go-ds-s3/plugin@latest
-RUN echo "\ns3ds github.com/ipfs/go-ds-s3/plugin 0" >> plugin/loader/preload_list
+RUN go get github.com/ipfs/go-ds-s3/go-ds-s3-plugin@latest
+RUN echo "\ns3ds github.com/ipfs/go-ds-s3/go-ds-s3-plugin 0" >> plugin/loader/preload_list
 RUN make build
 RUN go mod tidy
 RUN make build
