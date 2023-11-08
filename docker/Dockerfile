@@ -1,4 +1,4 @@
-FROM golang:1.19.1-buster AS builder
+FROM golang:1.21-bookworm AS builder
 
 WORKDIR /
 
@@ -18,15 +18,15 @@ ENV SRC_DIR /kubo
 WORKDIR $SRC_DIR
 
 # Install the plugin and build ipfs
-RUN go get github.com/ipfs/go-ds-s3/go-ds-s3-plugin@latest
-RUN echo "\ns3ds github.com/ipfs/go-ds-s3/go-ds-s3-plugin 0" >> plugin/loader/preload_list
-RUN make build
+RUN go get github.com/ipfs/go-ds-s3@latest
+RUN echo "\ns3ds github.com/ipfs/go-ds-s3/plugin 0" >> plugin/loader/preload_list
+RUN make build || : #first build will fail
 RUN go mod tidy
 RUN make build
 RUN make install
 
 # The actual IPFS image we will use
-FROM ipfs/kubo:v0.19.2
+FROM ipfs/kubo:v0.23.0
 ENV SRC_DIR /kubo
 
 # We copy the new binaries we built in the 'builder' stage (--from=builder)
