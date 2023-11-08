@@ -46,8 +46,7 @@ As go plugins can be finicky to correctly compile and install, you may want to c
 > export GO111MODULE=on
 
 # (Optionally) clean go cache
-go clean -modcache; go clean -cache
-
+go clean -modcache
 # Clone kubo.
 > git clone https://github.com/ipfs/kubo
 > cd kubo
