@@ -53,7 +53,7 @@ go clean -modcache; go clean -cache
 > cd kubo
 
 # Pull in the datastore plugin (you can specify a version other than latest if you'd like).
-> go get github.com/ipfs/go-ds-s3/go-ds-s3-plugin@latest
+> go get github.com/ipfs/go-ds-s3@latest
 
 # Add the plugin to the preload list.
 > echo -en "\ns3ds github.com/ipfs/go-ds-s3/go-ds-s3-plugin 0" >> plugin/loader/preload_list
