@@ -9,7 +9,7 @@ build: $(SRC)
 	go build -buildmode=plugin -trimpath -o go-ds-s3-plugin
 
 install: build
-	mkdir -p "$(IPFS_PATH)/.ipfs/plugins"
+	mkdir -p "$(IPFS_PATH)/plugins"
 	install -Dm700 go-ds-s3-plugin "$(IPFS_PATH)/plugins/go-ds-s3-plugin"
 
 dist: build
