@@ -53,7 +53,7 @@ As go plugins can be finicky to correctly compile and install, you may want to c
 > go get github.com/ipfs/go-ds-s3@latest
 
 # Add the plugin to the preload list.
-> echo -en "\ns3ds github.com/ipfs/go-ds-s3/go-ds-s3-plugin 0" >> plugin/loader/preload_list
+> echo -en "\ns3ds github.com/ipfs/go-ds-s3/plugin 0" >> plugin/loader/preload_list
 
 # ( this first pass will fail ) Try to build kubo with the plugin
 > make build
