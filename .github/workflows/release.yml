@@ -1,6 +1,7 @@
 name: Kubo plugin
 
 on:
+  pull_request:
   push:
 
 
