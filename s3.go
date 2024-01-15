@@ -81,7 +81,6 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 		}},
 		&credentials.EnvProvider{},
 		&credentials.SharedCredentialsProvider{},
-		&stscreds.WebIdentityRoleProvider{},
 		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(sess)},
 		endpointcreds.NewProviderClient(*d.Config, d.Handlers, conf.CredentialsEndpoint,
 			func(p *endpointcreds.Provider) { p.ExpiryWindow = credsRefreshWindow },
