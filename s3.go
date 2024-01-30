@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"io"
+	"os"
 	"path"
 	"strings"
 	"sync"
@@ -70,7 +73,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 	}
 
 	d := defaults.Get()
-	creds := credentials.NewChainCredentials([]credentials.Provider{
+	providers := []credentials.Provider{
 		&credentials.StaticProvider{Value: credentials.Value{
 			AccessKeyID:     conf.AccessKey,
 			SecretAccessKey: conf.SecretKey,
@@ -82,7 +85,16 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 		endpointcreds.NewProviderClient(*d.Config, d.Handlers, conf.CredentialsEndpoint,
 			func(p *endpointcreds.Provider) { p.ExpiryWindow = credsRefreshWindow },
 		),
-	})
+	}
+
+	if len(os.Getenv("AWS_ROLE_ARN")) > 0 && len(os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")) > 0 {
+		stsClient := sts.New(sess)
+		stsProvider := stscreds.NewWebIdentityRoleProviderWithOptions(stsClient, os.Getenv("AWS_ROLE_ARN"), "", stscreds.FetchTokenPath(os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")))
+		// prepend sts provider to list of providers
+		providers = append([]credentials.Provider{stsProvider}, providers...)
+	}
+
+	creds := credentials.NewChainCredentials(providers)
 
 	if conf.RegionEndpoint != "" {
 		awsConfig.WithS3ForcePathStyle(true)
