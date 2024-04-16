@@ -18,3 +18,6 @@ jobs:
     uses: ipdxco/unified-github-workflows/.github/workflows/go-test.yml@v1.0
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    with:
+      go-versions: '["this"]'
+
