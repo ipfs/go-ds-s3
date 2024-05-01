@@ -1,32 +1,39 @@
-FROM golang:1.21-bookworm AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.22 AS builder
 
-WORKDIR /
+ARG TARGETOS TARGETARCH
 
-# Install jq for JSON manipulation in the config file
-RUN apt update && apt install -y jq
-
-# Kubo build process
-# See details: https://github.com/ipfs/go-ds-s3
-ENV GO111MODULE on
-ENV GOPROXY direct
-
-# We clone Kubo source code.
-RUN git clone https://github.com/ipfs/kubo
 ENV SRC_DIR /kubo
 
-# Move to kubo folder
 WORKDIR $SRC_DIR
 
-# Install the plugin and build ipfs
+RUN git clone --branch v0.28.0 https://github.com/ipfs/kubo.git .
+RUN go mod download
+
 RUN go get github.com/ipfs/go-ds-s3@latest
 RUN echo "\ns3ds github.com/ipfs/go-ds-s3/plugin 0" >> plugin/loader/preload_list
-RUN make build || : #first build will fail
-RUN go mod tidy
-RUN make build
-RUN make install
+
+# Preload an in-tree but disabled-by-default plugin by adding it to the IPFS_PLUGINS variable
+# e.g. docker build --build-arg IPFS_PLUGINS="foo bar baz"
+ARG IPFS_PLUGINS
+
+# Allow for other targets to be built, e.g.: docker build --build-arg MAKE_TARGET="nofuse"
+ARG MAKE_TARGET=build
+
+# Build the thing.
+# Also: fix getting HEAD commit hash via git rev-parse.
+RUN mkdir -p .git/objects \
+    && GOOS="$TARGETOS" GOARCH="$TARGETARCH" GOFLAGS=-buildvcs=false make ${MAKE_TARGET} IPFS_PLUGINS="$IPFS_PLUGINS"
+
+FROM debian:stable-slim AS utilities
+
+# Install jq for JSON manipulation in the config file
+RUN apt-get update && apt-get install -y \
+    jq \
+    && apt-get clean
 
 # The actual IPFS image we will use
-FROM ipfs/kubo:v0.23.0
+FROM ipfs/kubo:v0.28.0
+
 ENV SRC_DIR /kubo
 
 # We copy the new binaries we built in the 'builder' stage (--from=builder)
@@ -38,9 +45,9 @@ COPY --from=builder $SRC_DIR/bin/container_init_run /usr/local/bin/container_ini
 RUN chmod 0755 /usr/local/bin/start_ipfs
 
 # We copy jq so we can manipulate the JSON config file easily in the init.d scripts
-COPY --from=builder /usr/bin/jq /usr/local/bin/jq 
-COPY --from=builder /usr/lib/*-linux-*/libjq.so.1 /usr/lib/
-COPY --from=builder /usr/lib/*-linux-*/libonig.so.5 /usr/lib/
+COPY --from=utilities /usr/bin/jq /usr/local/bin/jq 
+COPY --from=utilities /usr/lib/*-linux-*/libjq.so.1 /usr/lib/
+COPY --from=utilities /usr/lib/*-linux-*/libonig.so.5 /usr/lib/
 
 # init.d script IPFS runs before starting the daemon. Used to manipulate the IPFS config file.
 COPY 001-config.sh /container-init.d/001-config.sh
