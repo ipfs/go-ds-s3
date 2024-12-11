@@ -1,13 +1,14 @@
-version: "3"
 services:
   minio:
-    image: minio/minio:edge@sha256:373cc16a29662f3f616a8de7facff0ef085257296256c59d64b158d9a59d2bd9
+    image: quay.io/minio/minio:RELEASE.2024-11-07T00-52-20Z
     environment:
       - MINIO_REGION_NAME=local
       - MINIO_ROOT_USER=test
       - MINIO_ROOT_PASSWORD=testdslocal
     ports:
       - 9000:9000
+    expose:
+      - 9000
     command:
       - server
       - /data
