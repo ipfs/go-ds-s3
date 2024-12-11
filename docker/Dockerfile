@@ -1,4 +1,4 @@
-FROM golang:1.21-bookworm AS builder
+FROM golang:1.23-bookworm AS builder
 
 WORKDIR /
 
@@ -26,7 +26,7 @@ RUN make build
 RUN make install
 
 # The actual IPFS image we will use
-FROM ipfs/kubo:v0.23.0
+FROM ipfs/kubo:v0.32.1
 ENV SRC_DIR /kubo
 
 # We copy the new binaries we built in the 'builder' stage (--from=builder)
