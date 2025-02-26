@@ -6,7 +6,7 @@ toolchain go1.24.0
 
 require (
 	github.com/aws/aws-sdk-go v1.55.5
-	github.com/ipfs/go-datastore v0.7.1-0.20250225204649-1676d105e588
+	github.com/ipfs/go-datastore v0.7.1-0.20250226000051-0dbca94435fd
 	github.com/ipfs/kubo v0.33.3-0.20250218205953-f00e115e1ed0
 )
 
