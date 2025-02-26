@@ -308,8 +308,8 @@ github.com/ipfs/go-datastore v0.7.1-0.20250226000051-0dbca94435fd/go.mod h1:BGN3
 github.com/ipfs/go-detect-race v0.0.1 h1:qX/xay2W3E4Q1U7d9lNs1sU9nvguX0a7319XbyQ6cOk=
 github.com/ipfs/go-detect-race v0.0.1/go.mod h1:8BNT7shDZPo99Q74BpGMK+4D8Mn4j46UU0LZ723meps=
 github.com/ipfs/go-ds-badger v0.0.7/go.mod h1:qt0/fWzZDoPW6jpQeqUjR5kBfhDNB65jd9YlmAvpQBk=
-github.com/ipfs/go-ds-badger v0.3.1 h1:83FktEcDg+pUsV8WLZ8rsKiMHIYNuuRFPN6AIrpwBSo=
-github.com/ipfs/go-ds-badger v0.3.1/go.mod h1:dLFJ2MtW92HZjT17jpxx4zB1s7O819Yi3ihY7mZedsM=
+github.com/ipfs/go-ds-badger v0.3.0 h1:xREL3V0EH9S219kFFueOYJJTcjgNSZ2HY1iSvN7U1Ro=
+github.com/ipfs/go-ds-badger v0.3.0/go.mod h1:1ke6mXNqeV8K3y5Ak2bAA0osoTfmxUdupVCGm4QUIek=
 github.com/ipfs/go-ds-flatfs v0.5.1 h1:ZCIO/kQOS/PSh3vcF1H6a8fkRGS7pOfwfPdx4n/KJH4=
 github.com/ipfs/go-ds-flatfs v0.5.1/go.mod h1:RWTV7oZD/yZYBKdbVIFXTX2fdY2Tbvl94NsWqmoyAX4=
 github.com/ipfs/go-ds-leveldb v0.1.0/go.mod h1:hqAW8y4bwX5LWcCtku2rFNX3vjDZCy5LZCg+cSZvYb8=
@@ -371,8 +371,8 @@ github.com/ipfs/go-unixfsnode v1.9.2 h1:0A12BYs4XOtDPJTMlwmNPlllDfqcc4yie4e919hc
 github.com/ipfs/go-unixfsnode v1.9.2/go.mod h1:v1nuMFHf4QTIhFUdPMvg1nQu7AqDLvIdwyvJ531Ot1U=
 github.com/ipfs/go-verifcid v0.0.3 h1:gmRKccqhWDocCRkC+a59g5QW7uJw5bpX9HWBevXa0zs=
 github.com/ipfs/go-verifcid v0.0.3/go.mod h1:gcCtGniVzelKrbk9ooUSX/pM3xlH73fZZJDzQJRvOUw=
-github.com/ipfs/kubo v0.33.3-0.20250218205953-f00e115e1ed0 h1:cdYDER9ICCKtXjd0h8hqSSV+PPUbqo8Omo/jM92+O4c=
-github.com/ipfs/kubo v0.33.3-0.20250218205953-f00e115e1ed0/go.mod h1:0U5lNsoPZfpJinsy6CKdB0LvPsEaJ8ZNV4pGalWqKb8=
+github.com/ipfs/kubo v0.33.2 h1:lHB3FhXk9yFjCiYNTNLqOjlUy7WWrIFQzVvOkJg0Ohg=
+github.com/ipfs/kubo v0.33.2/go.mod h1:Ie+fLMp88GbFt1K3xjG6sxfzXwoAYlYRMM/DFHtYf8I=
 github.com/ipld/go-car v0.6.2 h1:Hlnl3Awgnq8icK+ze3iRghk805lu8YNq3wlREDTF2qc=
 github.com/ipld/go-car v0.6.2/go.mod h1:oEGXdwp6bmxJCZ+rARSkDliTeYnVzv3++eXajZ+Bmr8=
 github.com/ipld/go-car/v2 v2.14.2 h1:9ERr7KXpCC7If0rChZLhYDlyr6Bes6yRKPJnCO3hdHY=

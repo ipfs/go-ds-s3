@@ -1,11 +1,11 @@
 module github.com/ipfs/go-ds-s3
 
-go 1.23.6
+go 1.23.0
 
 require (
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/ipfs/go-datastore v0.7.1-0.20250226000051-0dbca94435fd
-	github.com/ipfs/kubo v0.33.3-0.20250218205953-f00e115e1ed0
+	github.com/ipfs/kubo v0.33.2
 )
 
 require (
