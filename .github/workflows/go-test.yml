@@ -19,5 +19,5 @@ jobs:
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
-      go-versions: '["1.23.6"]'
+      go-versions: '["this"]'
 
