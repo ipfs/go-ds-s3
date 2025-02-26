@@ -4,7 +4,7 @@ go 1.23.6
 
 require (
 	github.com/aws/aws-sdk-go v1.55.6
-	github.com/ipfs/go-datastore v0.7.1-0.20250226000051-0dbca94435fd
+	github.com/ipfs/go-datastore v0.8.0
 	github.com/ipfs/kubo v0.33.2
 )
 
