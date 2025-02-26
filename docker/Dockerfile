@@ -26,7 +26,7 @@ RUN make build
 RUN make install
 
 # The actual IPFS image we will use
-FROM ipfs/kubo:v0.32.1
+FROM ipfs/kubo:v0.33.2
 ENV SRC_DIR /kubo
 
 # We copy the new binaries we built in the 'builder' stage (--from=builder)
