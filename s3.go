@@ -243,7 +243,7 @@ func (s *S3Bucket) Query(ctx context.Context, q dsq.Query) (dsq.Results, error) 
 	}
 
 	return dsq.ResultsFromIterator(q, dsq.Iterator{
-		Close: func() {},
+		Close: func() error { return nil },
 		Next:  nextValue,
 	}), nil
 }

@@ -4,7 +4,7 @@ go 1.23.6
 
 require (
 	github.com/aws/aws-sdk-go v1.55.6
-	github.com/ipfs/go-datastore v0.8.0
+	github.com/ipfs/go-datastore v0.8.2
 	github.com/ipfs/kubo v0.33.2
 )
 
@@ -57,6 +57,7 @@ require (
 	github.com/ipfs/go-blockservice v0.5.2 // indirect
 	github.com/ipfs/go-cid v0.5.0 // indirect
 	github.com/ipfs/go-cidutil v0.1.0 // indirect
+	github.com/ipfs/go-detect-race v0.0.1 // indirect
 	github.com/ipfs/go-ds-measure v0.2.0 // indirect
 	github.com/ipfs/go-fs-lock v0.0.7 // indirect
 	github.com/ipfs/go-ipfs-blockstore v1.3.1 // indirect
