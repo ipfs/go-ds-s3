@@ -1,6 +1,6 @@
-services:
+≈services:
   minio:
-    image: quay.io/minio/minio:RELEASE.2024-11-07T00-52-20Z
+    image: quay.io/minio/minio:RELEASE.2025-02-28T09-55-16Z
     environment:
       - MINIO_REGION_NAME=local
       - MINIO_ROOT_USER=test
