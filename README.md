@@ -1,5 +1,11 @@
 # S3 Datastore Implementation
 
+> [!WARNING]
+> ## 🚧 Looking for Maintainers 🚧
+>
+> This is an opt-in datastore implementation for those who need S3-compatible storage backends.
+> The project is in need of active maintenance from people who are actually using it. If you are interested in maintaining this datastore implementation, please reach out to devrel@ipfs.tech.
+
 This is an implementation of the datastore interface backed by amazon s3.
 
 **NOTE:** Plugins only work on Linux and MacOS at the moment. You can track the progress of this issue here: https://github.com/golang/go/issues/19282
