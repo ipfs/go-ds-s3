@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/aws/aws-sdk-go v1.55.6
-	github.com/ipfs/go-datastore v0.9.0
+	github.com/ipfs/go-datastore v0.8.4
 	github.com/ipfs/go-log/v2 v2.9.0
 	github.com/ipfs/kubo v0.37.0
 )
