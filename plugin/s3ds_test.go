@@ -22,10 +22,11 @@ func TestS3PluginDatastoreConfigParser(t *testing.T) {
 				"secretKey": "somesecretkey",
 			},
 			Want: &S3Config{cfg: s3ds.Config{
-				Region:    "someregion",
-				Bucket:    "somebucket",
-				AccessKey: "someaccesskey",
-				SecretKey: "somesecretkey",
+				Region:       "someregion",
+				Bucket:       "somebucket",
+				AccessKey:    "someaccesskey",
+				SecretKey:    "somesecretkey",
+				KeyTransform: "default",
 			}},
 		},
 		{

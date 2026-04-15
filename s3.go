@@ -5,13 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/ipfs/boxo/datastore/dshelp"
-	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-ds-s3/pkg/filecache"
-	disk "github.com/ipfs/go-ds-s3/pkg/minio-disk"
-	golog "github.com/ipfs/go-log/v2"
 	"io"
 	"os"
 	"path"
@@ -19,17 +12,26 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ipfs/boxo/datastore/dshelp"
+	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-ds-s3/pkg/filecache"
+	disk "github.com/ipfs/go-ds-s3/pkg/minio-disk"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/credentials/endpointcreds"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/sts"
 	ds "github.com/ipfs/go-datastore"
 	dsq "github.com/ipfs/go-datastore/query"
+	logging "github.com/ipfs/go-log/v2"
 )
 
 const (
@@ -48,13 +50,14 @@ const (
 	credsRefreshWindow = 2 * time.Minute
 )
 
-var logging = golog.Logger("go-ds-s3")
-
-var _ ds.Datastore = (*S3Bucket)(nil)
+var (
+	_   ds.Datastore = (*S3Bucket)(nil)
+	log              = logging.Logger("godss3")
+)
 
 type S3Bucket struct {
 	Config
-	S3    *s3.S3
+	S3    s3iface.S3API
 	Cache filecache.FileCache
 }
 
@@ -95,6 +98,18 @@ func printCid(k ds.Key) string {
 }
 
 func NewS3Datastore(conf Config) (*S3Bucket, error) {
+	logConfig := conf
+	if logConfig.AccessKey != "" {
+		logConfig.AccessKey = ""
+	}
+	if logConfig.SecretKey != "" {
+		logConfig.SecretKey = ""
+	}
+	if logConfig.SessionToken != "" {
+		logConfig.SessionToken = ""
+	}
+	log.Infof("creating new S3 datastore with config: %+v", logConfig)
+
 	if conf.Workers == 0 {
 		conf.Workers = defaultWorkers
 	}
@@ -153,10 +168,10 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 			info, err := disk.GetInfo(conf.CacheDirectory, false)
 			if err == nil {
 				cacheImpl.MaxSize = int64(float64(info.Total) * 0.8)
-				logging.Infof("[go-ds-s3] cache capacity is automatically set to %.2f GB", float64(cacheImpl.MaxSize)/filecache.Gigabyte)
+				log.Infof("[go-ds-s3] cache capacity is automatically set to %.2f GB", float64(cacheImpl.MaxSize)/filecache.Gigabyte)
 			} else {
 				cacheImpl.MaxSize = filecache.Gigabyte
-				logging.Infof("[go-ds-s3] could not get disk info for cache directory(%s): %+v", conf.CacheDirectory, err)
+				log.Infof("[go-ds-s3] could not get disk info for cache directory(%s): %+v", conf.CacheDirectory, err)
 			}
 		}
 		cache = cacheImpl
@@ -164,7 +179,7 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 		cache = filecache.NewNoop()
 	}
 	if err = cache.Start(); err != nil {
-		logging.Infof("[go-ds-s3] cache(%s) failed to start: %+v", conf.CacheDirectory, err)
+		log.Infof("[go-ds-s3] cache(%s) failed to start: %+v", conf.CacheDirectory, err)
 		cache = filecache.NewNoop()
 	}
 
@@ -176,6 +191,8 @@ func NewS3Datastore(conf Config) (*S3Bucket, error) {
 }
 
 func (s *S3Bucket) Put(ctx context.Context, k ds.Key, value []byte) error {
+	log.Debugf("put: %s", k)
+
 	key := prepareKey(s.Config, k)
 
 	_, err := s.S3.PutObjectWithContext(ctx, &s3.PutObjectInput{
@@ -185,6 +202,9 @@ func (s *S3Bucket) Put(ctx context.Context, k ds.Key, value []byte) error {
 	})
 	if err == nil {
 		s.writeToCache(key, value)
+	}
+	if err != nil {
+		log.Errorf("put error on key %s: %v", k, err)
 	}
 	return err
 }
@@ -198,7 +218,7 @@ func (s *S3Bucket) Get(ctx context.Context, k ds.Key) ([]byte, error) {
 	var resp *s3.GetObjectOutput
 	keys := prepareKeyWithFallback(s.Config, k)
 
-	logging.Debugf("Get %s", printCid(k))
+	log.Debugf("get: %s", k)
 
 	cachedFile, cerr := s.Cache.Open(keys[0])
 	if cerr == nil {
@@ -233,9 +253,10 @@ func (s *S3Bucket) Get(ctx context.Context, k ds.Key) ([]byte, error) {
 	}
 	if err != nil {
 		if isNotFound(err) {
-			logging.Debugf("Get NotFound %s", printCid(k))
+			log.Debugf("get: %s not found", k)
 			return nil, ds.ErrNotFound
 		}
+		log.Errorf("get error on key %s: %v", k, err)
 		return nil, err
 	}
 
@@ -245,6 +266,7 @@ func (s *S3Bucket) Get(ctx context.Context, k ds.Key) ([]byte, error) {
 }
 
 func (s *S3Bucket) Has(ctx context.Context, k ds.Key) (exists bool, err error) {
+	log.Debugf("has: %s", k)
 	_, err = s.GetSize(ctx, k)
 	if err != nil {
 		if errors.Is(err, ds.ErrNotFound) {
@@ -256,10 +278,10 @@ func (s *S3Bucket) Has(ctx context.Context, k ds.Key) (exists bool, err error) {
 }
 
 func (s *S3Bucket) GetSize(ctx context.Context, k ds.Key) (size int, err error) {
+	log.Debugf("get size: %s", k)
+
 	var resp *s3.HeadObjectOutput
 	keys := prepareKeyWithFallback(s.Config, k)
-
-	logging.Debugf("GetSize %s", printCid(k))
 
 	for _, key := range keys {
 		resp, err = s.S3.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
@@ -274,12 +296,15 @@ func (s *S3Bucket) GetSize(ctx context.Context, k ds.Key) (size int, err error) 
 		if isNotFound(err) {
 			return -1, ds.ErrNotFound
 		}
+		log.Errorf("get size error on key %s: %v", k, err)
 		return -1, err
 	}
-	return int(*resp.ContentLength), nil
+	return int(aws.Int64Value(resp.ContentLength)), nil
 }
 
 func (s *S3Bucket) Delete(ctx context.Context, k ds.Key) error {
+	log.Debugf("delete: %s", k)
+
 	var err error
 	keys := prepareKeyWithFallback(s.Config, k)
 
@@ -296,7 +321,10 @@ func (s *S3Bucket) Delete(ctx context.Context, k ds.Key) error {
 	}
 	if isNotFound(err) {
 		// delete is idempotent
+		log.Debugf("delete: %s not found, idempotent", k)
 		err = nil
+	} else if err != nil {
+		log.Errorf("delete error on key %s: %v", k, err)
 	}
 	return err
 }
@@ -304,12 +332,12 @@ func (s *S3Bucket) Delete(ctx context.Context, k ds.Key) error {
 func (s *S3Bucket) writeToCache(k string, data []byte) {
 	writer, err := s.Cache.Create(k)
 	if err != nil {
-		logging.Infof("cache create failed: %+v", err)
+		log.Infof("cache create failed: %+v", err)
 		return
 	}
 	_, err = writer.Write(data)
 	if err != nil {
-		logging.Infof("cache write failed: %+v", err)
+		log.Infof("cache write failed: %+v", err)
 		writer.Cancel()
 	} else {
 		writer.Close()
@@ -329,76 +357,113 @@ func prepareKeyWithFallback(cfg Config, k ds.Key) []string {
 }
 
 func (s *S3Bucket) Query(ctx context.Context, q dsq.Query) (dsq.Results, error) {
+	log.Debugf("query: %+v", q)
 	if q.Orders != nil || q.Filters != nil {
-		logging.Infof("s3ds: filters or orders are not supported")
-		return nil, fmt.Errorf("s3ds: filters or orders are not supported")
-	}
-
-	// S3 store a "/foo" key as "foo" so we need to trim the leading "/"
-	q.Prefix = strings.TrimPrefix(q.Prefix, "/")
-
-	limit := q.Limit + q.Offset
-	if limit == 0 || limit > listMax {
-		limit = listMax
-	}
-
-	logging.Debugf("Query ds prefix: %v", q.Prefix)
-
-	resp, err := s.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
-		Bucket:  aws.String(s.Bucket),
-		Prefix:  aws.String(s.s3Path(q.Prefix)),
-		MaxKeys: aws.Int64(int64(limit)),
-	})
-	if err != nil {
+		err := fmt.Errorf("s3ds: filters or orders are not supported")
+		log.Error(err)
 		return nil, err
 	}
 
-	index := q.Offset
+	// S3 store a "/foo" key as "foo" so we need to trim the leading "/"
+	prefix := strings.TrimPrefix(q.Prefix, "/")
+
+	listInput := &s3.ListObjectsV2Input{
+		Bucket:  aws.String(s.Bucket),
+		Prefix:  aws.String(s.s3Path(prefix)),
+		MaxKeys: aws.Int64(listMax),
+	}
+
+	// The iterator needs to be stateful across Next() calls.
+	// The closure will capture these state variables.
+	var (
+		resp    *s3.ListObjectsV2Output
+		err     error
+		index   = 0
+		started = false
+		skipped = 0
+		yielded = 0
+	)
+
 	nextValue := func() (dsq.Result, bool) {
-		for index >= len(resp.Contents) {
-			if !*resp.IsTruncated {
+		// Initial fetch on first call
+		if !started {
+			log.Debugf("query: initial list call for prefix %s", q.Prefix)
+			resp, err = s.S3.ListObjectsV2WithContext(ctx, listInput)
+			if err != nil {
+				log.Errorf("query: list objects error: %v", err)
+				return dsq.Result{Error: err}, false
+			}
+			started = true
+		}
+
+		for {
+			// Have we yielded enough results according to limit?
+			if q.Limit > 0 && yielded >= q.Limit {
 				return dsq.Result{}, false
 			}
 
-			index -= len(resp.Contents)
+			// Do we need to fetch the next page of results?
+			for index >= len(resp.Contents) {
+				if !aws.BoolValue(resp.IsTruncated) {
+					log.Debug("query: end of results")
+					return dsq.Result{}, false
+				}
 
-			resp, err = s.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
-				Bucket:            aws.String(s.Bucket),
-				Prefix:            aws.String(s.s3Path(q.Prefix)),
-				Delimiter:         aws.String("/"),
-				MaxKeys:           aws.Int64(listMax),
-				ContinuationToken: resp.NextContinuationToken,
-			})
-			if err != nil {
-				return dsq.Result{Error: err}, false
+				index = 0
+				listInput.ContinuationToken = resp.NextContinuationToken
+				log.Debugf("query: fetching next page with token %s", *resp.NextContinuationToken)
+				resp, err = s.S3.ListObjectsV2WithContext(ctx, listInput)
+				if err != nil {
+					log.Errorf("query: list objects error on next page: %v", err)
+					return dsq.Result{Error: err}, false
+				}
 			}
-		}
 
-		entry := dsq.Entry{
-			Key:  ds.NewKey(*resp.Contents[index].Key).String(),
-			Size: int(*resp.Contents[index].Size),
-		}
-		if !q.KeysOnly {
-			value, err := s.Get(ctx, ds.NewKey(entry.Key))
-			if err != nil {
-				return dsq.Result{Error: err}, false
+			// Have we skipped enough results according to offset?
+			if skipped < q.Offset {
+				skipped++
+				index++
+				continue
 			}
-			entry.Value = value
-		}
 
-		index++
-		return dsq.Result{Entry: entry}, true
+			// If we are here, we have an entry to return.
+			keyFromS3 := aws.StringValue(resp.Contents[index].Key)
+			dsKeyPath := strings.TrimPrefix(keyFromS3, s.RootDirectory)
+			dsKeyPath = strings.TrimPrefix(dsKeyPath, "/")
+
+			entry := dsq.Entry{
+				Key:  ds.NewKey(dsKeyPath).String(),
+				Size: int(aws.Int64Value(resp.Contents[index].Size)),
+			}
+			if !q.KeysOnly {
+				value, getErr := s.Get(ctx, ds.NewKey(entry.Key))
+				if getErr != nil {
+					return dsq.Result{Error: getErr}, false
+				}
+				entry.Value = value
+			}
+
+			index++
+			yielded++
+			return dsq.Result{Entry: entry}, true
+		}
 	}
 
-	return dsq.ResultsFromIterator(q, dsq.Iterator{
-		Close: func() error {
-			return nil
-		},
-		Next: nextValue,
+	// We are handling offset and limit in our iterator.
+	// We create a new query object for ResultsFromIterator to avoid it also
+	// trying to apply them.
+	cleanQuery := q
+	cleanQuery.Offset = 0
+	cleanQuery.Limit = 0
+
+	return dsq.ResultsFromIterator(cleanQuery, dsq.Iterator{
+		Close: func() error { return nil },
+		Next:  nextValue,
 	}), nil
 }
 
 func (s *S3Bucket) Batch(_ context.Context) (ds.Batch, error) {
+	log.Debug("starting batch")
 	return &s3Batch{
 		s:          s,
 		ops:        make(map[string]batchOp),
@@ -411,7 +476,7 @@ func (s *S3Bucket) Close() error {
 }
 
 func (s *S3Bucket) s3Path(p string) string {
-	return path.Join(s.RootDirectory, p)
+	return path.Join(s.RootDirectory, strings.TrimPrefix(p, "/"))
 }
 
 func isNotFound(err error) bool {
@@ -432,6 +497,7 @@ type batchOp struct {
 }
 
 func (b *s3Batch) Put(ctx context.Context, k ds.Key, val []byte) error {
+	log.Debugf("batch put: %s", k)
 	b.ops[k.String()] = batchOp{
 		val:    val,
 		delete: false,
@@ -440,6 +506,7 @@ func (b *s3Batch) Put(ctx context.Context, k ds.Key, val []byte) error {
 }
 
 func (b *s3Batch) Delete(ctx context.Context, k ds.Key) error {
+	log.Debugf("batch delete: %s", k)
 	b.ops[k.String()] = batchOp{
 		val:    nil,
 		delete: true,
@@ -448,6 +515,7 @@ func (b *s3Batch) Delete(ctx context.Context, k ds.Key) error {
 }
 
 func (b *s3Batch) Commit(ctx context.Context) error {
+	log.Debugf("committing batch with %d operations", len(b.ops))
 	var (
 		deleteObjs []*s3.ObjectIdentifier
 		putKeys    []ds.Key
@@ -455,14 +523,19 @@ func (b *s3Batch) Commit(ctx context.Context) error {
 	for k, op := range b.ops {
 		if op.delete {
 			deleteObjs = append(deleteObjs, &s3.ObjectIdentifier{
-				Key: aws.String(k),
+				Key: aws.String(b.s.s3Path(k)),
 			})
 		} else {
 			putKeys = append(putKeys, ds.NewKey(k))
 		}
 	}
 
+	log.Debugf("batch commit: %d puts, %d deletes", len(putKeys), len(deleteObjs))
+
 	numJobs := len(putKeys) + (len(deleteObjs) / deleteMax)
+	if len(deleteObjs)%deleteMax > 0 {
+		numJobs++
+	}
 	jobs := make(chan func() error, numJobs)
 	results := make(chan error, numJobs)
 
@@ -506,9 +579,12 @@ func (b *s3Batch) Commit(ctx context.Context) error {
 		}
 	}
 	if len(errs) > 0 {
-		return fmt.Errorf("s3ds: failed batch operation:\n%s", strings.Join(errs, "\n"))
+		err := fmt.Errorf("s3ds: failed batch operation:\n%s", strings.Join(errs, "\n"))
+		log.Error(err)
+		return err
 	}
 
+	log.Debug("batch commit successful")
 	return nil
 }
 
@@ -520,6 +596,7 @@ func (b *s3Batch) newPutJob(ctx context.Context, k ds.Key, value []byte) func() 
 
 func (b *s3Batch) newDeleteJob(ctx context.Context, objs []*s3.ObjectIdentifier) func() error {
 	return func() error {
+		log.Debugf("batch worker: deleting %d objects", len(objs))
 		resp, err := b.s.S3.DeleteObjectsWithContext(ctx, &s3.DeleteObjectsInput{
 			Bucket: aws.String(b.s.Bucket),
 			Delete: &s3.Delete{
@@ -527,6 +604,7 @@ func (b *s3Batch) newDeleteJob(ctx context.Context, objs []*s3.ObjectIdentifier)
 			},
 		})
 		if err != nil && !isNotFound(err) {
+			log.Errorf("batch worker: error deleting objects: %v", err)
 			return err
 		}
 
@@ -540,7 +618,9 @@ func (b *s3Batch) newDeleteJob(ctx context.Context, objs []*s3.ObjectIdentifier)
 		}
 
 		if len(errs) > 0 {
-			return fmt.Errorf("failed to delete objects: %s", errs)
+			err := fmt.Errorf("failed to delete objects: %s", errs)
+			log.Error(err)
+			return err
 		}
 
 		return nil

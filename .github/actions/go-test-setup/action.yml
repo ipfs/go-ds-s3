@@ -35,4 +35,5 @@ runs:
     - name: Check if minio is running
       shell: bash
       run: |
+        sleep 10
         mc alias set minio 'http://localhost:9000' '${{ env.MINIO_ROOT_USER }}' '${{ env.MINIO_ROOT_PASSWORD }}'
